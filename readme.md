@@ -200,6 +200,8 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 
 ## Support
 
+<!-- Dies ist ein Kommentar und wird nicht gerendert
+
 If you find this project useful, consider supporting its development:
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-☕-yellow?style=for-the-badge)](https://buymeacoffee.com/<your-username>)
@@ -209,5 +211,6 @@ If you find this project useful, consider supporting its development:
 
 | Currency | Address |
 |----------|---------|
-| Bitcoin (BTC) | `<your-btc-address>` |
-| Ethereum (ETH) | `<your-eth-address>` |
+| Bitcoin (BTC) | `<btc-address>` |
+| Ethereum (ETH) | `<eth-address>` |
+-->
