@@ -1,0 +1,94 @@
+{
+  "name": "kicad-project-manager",
+  "version": "0.1.0",
+  "description": "KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer",
+  "main": "dist/main/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite --config vite.config.ts",
+    "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && electron .",
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && vite build --config vite.config.ts",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "kicad",
+    "eda",
+    "pcb",
+    "schematic",
+    "gerber",
+    "project-manager"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.183.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.1",
+    "electron": "^40.6.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.4"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "lucide-react": "^0.575.0",
+    "mermaid": "^11.12.3",
+    "occt-import-js": "^0.0.23",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.0",
+    "remark-gfm": "^4.0.1",
+    "three": "^0.183.0",
+    "zustand": "^5.0.11"
+  },
+  "build": {
+    "appId": "com.kicad-pm.app",
+    "productName": "KiCad Project Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Development"
+    }
+  }
+}

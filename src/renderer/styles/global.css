@@ -1,0 +1,151 @@
+/* KiCad Project Manager — Global Styles (Catppuccin Mocha Dark Theme) */
+
+:root,
+[data-theme="dark"] {
+  /* Base colors */
+  --bg-base: #1e1e2e;
+  --bg-surface: #181825;
+  --bg-overlay: #313244;
+  --bg-muted: #45475a;
+  --bg-subtle: #585b70;
+  
+  /* Text */
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --text-accent: #89b4fa;
+  
+  /* Accent colors */
+  --accent-blue: #89b4fa;
+  --accent-green: #a6e3a1;
+  --accent-red: #f38ba8;
+  --accent-yellow: #f9e2af;
+  --accent-purple: #cba6f7;
+  --accent-teal: #94e2d5;
+  --accent-orange: #fab387;
+
+  /* Borders */
+  --border-color: #313244;
+  --border-subtle: #45475a;
+
+  /* Shadows */
+  --shadow-dropdown: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-context: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* Sizes */
+  --sidebar-width: 280px;
+  --titlebar-height: 32px;
+  --tab-height: 36px;
+  --toolbar-height: 40px;
+  --statusbar-height: 24px;
+
+  /* Fonts */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 14px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+}
+
+/* ===== LIGHT THEME (Catppuccin Latte) ===== */
+[data-theme="light"] {
+  --bg-base: #eff1f5;
+  --bg-surface: #e6e9ef;
+  --bg-overlay: #ccd0da;
+  --bg-muted: #bcc0cc;
+  --bg-subtle: #acb0be;
+
+  --text-primary: #4c4f69;
+  --text-secondary: #5c5f77;
+  --text-muted: #8c8fa1;
+  --text-accent: #1e66f5;
+
+  --accent-blue: #1e66f5;
+  --accent-green: #40a02b;
+  --accent-red: #d20f39;
+  --accent-yellow: #df8e1d;
+  --accent-purple: #8839ef;
+  --accent-teal: #179299;
+  --accent-orange: #fe640b;
+
+  --border-color: #ccd0da;
+  --border-subtle: #bcc0cc;
+
+  --shadow-dropdown: 0 6px 20px rgba(0, 0, 0, 0.12);
+  --shadow-context: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-muted);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-subtle);
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(137, 180, 250, 0.3);
+}
+
+/* Utility classes */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
