@@ -1,6 +1,6 @@
 {
   "name": "kicad-project-manager",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer",
   "main": "dist/main/main/main.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "gerber",
     "project-manager"
   ],
-  "author": "",
+  "author": "JThiessen",
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
@@ -68,7 +68,8 @@
         "nsis",
         "portable"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,

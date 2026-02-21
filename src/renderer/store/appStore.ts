@@ -21,6 +21,10 @@ interface AppState {
   bottomPanelVisible: boolean;
   theme: 'dark' | 'light';
   settingsOpen: boolean;
+  aboutOpen: boolean;
+
+  // Global progress indicator
+  globalProgress: { message: string; indeterminate?: boolean } | null;
 
   // Actions
   setWorkspace: (ws: WorkspaceState) => void;
@@ -43,6 +47,8 @@ interface AppState {
   toggleBottomPanel: () => void;
   toggleTheme: () => void;
   setSettingsOpen: (open: boolean) => void;
+  setAboutOpen: (open: boolean) => void;
+  setGlobalProgress: (progress: { message: string; indeterminate?: boolean } | null) => void;
   clearWorkspace: () => void;
 }
 
@@ -63,6 +69,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   bottomPanelVisible: false,
   theme: (localStorage.getItem('kicad-pm-theme') as 'dark' | 'light') ?? 'dark',
   settingsOpen: false,
+  aboutOpen: false,
+  globalProgress: null,
 
   // Workspace
   setWorkspace: (ws) => set({ workspace: ws }),
@@ -146,6 +154,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { theme: next };
   }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setAboutOpen: (open) => set({ aboutOpen: open }),
+  setGlobalProgress: (progress) => set({ globalProgress: progress }),
   clearWorkspace: () => set({
     workspace: null,
     workspaceDirty: false,

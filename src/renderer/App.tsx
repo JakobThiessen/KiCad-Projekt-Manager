@@ -6,6 +6,8 @@ import { EditorArea } from './components/EditorArea';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SettingsDialog } from './components/SettingsDialog';
+import { AboutDialog } from './components/AboutDialog';
+import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { useAppStore } from './store/appStore';
 import './styles/app.css';
@@ -24,11 +26,13 @@ export function App() {
   const setWorkspace = useAppStore(s => s.setWorkspace);
   const setFileTree = useAppStore(s => s.setFileTree);
   const setWorkspaceDirty = useAppStore(s => s.setWorkspaceDirty);
+  const setGlobalProgress = useAppStore(s => s.setGlobalProgress);
 
   // Restore last workspace state on mount
   useEffect(() => {
     (async () => {
       try {
+        setGlobalProgress({ message: 'Workspace wird geladen…', indeterminate: true });
         const ws = await window.api.getWorkspace();
         if (ws) {
           setWorkspace(ws);
@@ -36,6 +40,7 @@ export function App() {
           if (tree) setFileTree(tree);
         }
       } catch { /* no workspace to restore */ }
+      finally { setGlobalProgress(null); }
     })();
   }, []);
 
@@ -110,6 +115,7 @@ export function App() {
       onDrop={handleAppDrop}
     >
       <TitleBar />
+      <GlobalProgressBar />
       <div className="app-body">
         {sidebarVisible && (
           <>
@@ -152,6 +158,7 @@ export function App() {
       </div>
       <StatusBar />
       <SettingsDialog />
+      <AboutDialog />
     </div>
   );
 }

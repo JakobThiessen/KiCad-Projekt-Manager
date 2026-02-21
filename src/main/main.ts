@@ -122,8 +122,8 @@ function setupIpcHandlers(): void {
     if (!visible) {
       // Collapse: save current bounds, shrink to sidebar-only width
       savedBounds = mainWindow.getBounds();
-      const sidebarWidth = 400; // sidebar + some padding
-      mainWindow.setMinimumSize(300, 400);
+      const sidebarWidth = 430; // sidebar + some padding
+      mainWindow.setMinimumSize(430, 400);
       mainWindow.setBounds({
         x: savedBounds.x,
         y: savedBounds.y,
@@ -302,15 +302,15 @@ function setupIpcHandlers(): void {
     return true;
   });
 
-  // WASM binary loading - reads WASM files from node_modules to bypass MIME type issues
+  // WASM binary loading - reads WASM files from node_modules (dev) or dist assets (production)
   ipcMain.handle(IPC_CHANNELS.GET_WASM_BINARY, async (_event, moduleName: string) => {
     const fsP = await import('fs/promises');
     let wasmPath: string;
     if (isDev) {
       wasmPath = path.join(__dirname, '..', '..', '..', 'node_modules', moduleName, 'dist', `${moduleName}.wasm`);
     } else {
-      // In production, WASM is copied next to the app
-      wasmPath = path.join(process.resourcesPath, 'wasm', `${moduleName}.wasm`);
+      // In production, WASM was copied to dist/renderer/assets/ by the Vite plugin
+      wasmPath = path.join(app.getAppPath(), 'dist', 'renderer', 'assets', `${moduleName}.wasm`);
     }
     const buf = await fsP.readFile(wasmPath);
     return buf.toString('base64');

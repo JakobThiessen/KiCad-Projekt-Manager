@@ -96,11 +96,16 @@ async function executeAction(action: string) {
         filters: [{ name: 'KiCad Workspace', extensions: ['kicadws'] }],
       });
       if (!result.canceled && result.filePaths.length > 0) {
-        const ws = await window.api.openWorkspaceFile(result.filePaths[0]);
-        store.setWorkspace(ws);
-        store.setWorkspaceDirty(false);
-        const tree = await window.api.getFileTree();
-        if (tree) store.setFileTree(tree);
+        store.setGlobalProgress({ message: 'Workspace wird geöffnet…', indeterminate: true });
+        try {
+          const ws = await window.api.openWorkspaceFile(result.filePaths[0]);
+          store.setWorkspace(ws);
+          store.setWorkspaceDirty(false);
+          const tree = await window.api.getFileTree();
+          if (tree) store.setFileTree(tree);
+        } finally {
+          store.setGlobalProgress(null);
+        }
       }
       break;
     }
@@ -114,13 +119,18 @@ async function executeAction(action: string) {
         title: 'Add Folder to Workspace',
       });
       if (!result.canceled && result.filePaths.length > 0) {
-        const res = await window.api.addFolder(result.filePaths[0]);
-        if (res.workspace) {
-          store.setWorkspace(res.workspace);
-          store.setWorkspaceDirty(true);
+        store.setGlobalProgress({ message: 'Ordner wird hinzugefügt…', indeterminate: true });
+        try {
+          const res = await window.api.addFolder(result.filePaths[0]);
+          if (res.workspace) {
+            store.setWorkspace(res.workspace);
+            store.setWorkspaceDirty(true);
+          }
+          const tree = await window.api.getFileTree();
+          if (tree) store.setFileTree(tree);
+        } finally {
+          store.setGlobalProgress(null);
         }
-        const tree = await window.api.getFileTree();
-        if (tree) store.setFileTree(tree);
       }
       break;
     }
@@ -189,10 +199,15 @@ async function executeAction(action: string) {
     }
     case 'refreshWorkspace': {
       if (store.workspace) {
-        const ws = await window.api.scanWorkspace();
-        if (ws) store.setWorkspace(ws);
-        const tree = await window.api.getFileTree();
-        if (tree) store.setFileTree(tree);
+        store.setGlobalProgress({ message: 'Workspace wird aktualisiert…', indeterminate: true });
+        try {
+          const ws = await window.api.scanWorkspace();
+          if (ws) store.setWorkspace(ws);
+          const tree = await window.api.getFileTree();
+          if (tree) store.setFileTree(tree);
+        } finally {
+          store.setGlobalProgress(null);
+        }
       }
       break;
     }
@@ -217,6 +232,11 @@ async function executeAction(action: string) {
       break;
     }
 
+    case 'about': {
+      store.setAboutOpen(true);
+      break;
+    }
+
     default: {
       // Handle openRecent:path actions
       if (action.startsWith('openRecent:')) {
@@ -238,6 +258,7 @@ export function TitleBar() {
   const workspace = useAppStore(s => s.workspace);
   const workspaceDirty = useAppStore(s => s.workspaceDirty);
   const theme = useAppStore(s => s.theme);
+  const editorPanelVisible = useAppStore(s => s.editorPanelVisible);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
   const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
@@ -373,14 +394,16 @@ export function TitleBar() {
 
       <div className="titlebar-spacer" />
 
-      <div className="titlebar-title">
-        {workspace
-          ? (workspace.filePath
-              ? workspace.filePath.split(/[/\\]/).pop()?.replace('.kicadws', '')
-              : 'Untitled')
-            + (workspaceDirty ? ' *' : '')
-          : 'KiCad Project Manager'}
-      </div>
+      {editorPanelVisible && (
+        <div className="titlebar-title">
+          {workspace
+            ? (workspace.filePath
+                ? workspace.filePath.split(/[/\\]/).pop()?.replace('.kicadws', '')
+                : 'Untitled')
+              + (workspaceDirty ? ' *' : '')
+            : 'KiCad Project Manager'}
+        </div>
+      )}
 
       <div className="titlebar-spacer" />
 

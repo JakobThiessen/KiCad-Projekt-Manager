@@ -1,4 +1,5 @@
 import React from 'react';
+import { Loader } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 
 export function StatusBar() {
@@ -6,6 +7,7 @@ export function StatusBar() {
   const tabs = useAppStore(s => s.tabs);
   const activeTabId = useAppStore(s => s.activeTabId);
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const globalProgress = useAppStore(s => s.globalProgress);
 
   return (
     <div className="statusbar">
@@ -16,6 +18,13 @@ export function StatusBar() {
           <span>No workspace</span>
         )}
       </div>
+
+      {globalProgress && (
+        <div className="statusbar-item statusbar-progress">
+          <Loader size={12} className="statusbar-spinner" />
+          <span>{globalProgress.message}</span>
+        </div>
+      )}
 
       <div className="statusbar-spacer" />
 

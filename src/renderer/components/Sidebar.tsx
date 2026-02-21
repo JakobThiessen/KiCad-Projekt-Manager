@@ -25,6 +25,7 @@ export function Sidebar() {
   const [collapseCounter, setCollapseCounter] = useState(0);
   const editorPanelVisible = useAppStore(s => s.editorPanelVisible);
   const toggleEditorPanel = useAppStore(s => s.toggleEditorPanel);
+  const setGlobalProgress = useAppStore(s => s.setGlobalProgress);
 
   // Sync filter state from workspace
   useEffect(() => {
@@ -50,11 +51,16 @@ export function Sidebar() {
 
   const refreshWorkspace = useCallback(async () => {
     if (!workspace) return;
-    const ws = await window.api.scanWorkspace();
-    if (ws) setWorkspace(ws);
-    const tree = await window.api.getFileTree();
-    if (tree) setFileTree(tree);
-  }, [workspace, setWorkspace, setFileTree]);
+    setGlobalProgress({ message: 'Workspace wird aktualisiert…', indeterminate: true });
+    try {
+      const ws = await window.api.scanWorkspace();
+      if (ws) setWorkspace(ws);
+      const tree = await window.api.getFileTree();
+      if (tree) setFileTree(tree);
+    } finally {
+      setGlobalProgress(null);
+    }
+  }, [workspace, setWorkspace, setFileTree, setGlobalProgress]);
 
   useEffect(() => {
     if (workspace) {
@@ -78,15 +84,20 @@ export function Sidebar() {
       title: 'Add Folder to Workspace',
     });
     if (!result.canceled && result.filePaths.length > 0) {
-      const res = await window.api.addFolder(result.filePaths[0]);
-      if (res.workspace) {
-        setWorkspace(res.workspace);
-        setWorkspaceDirty(true);
+      setGlobalProgress({ message: 'Ordner wird hinzugefügt…', indeterminate: true });
+      try {
+        const res = await window.api.addFolder(result.filePaths[0]);
+        if (res.workspace) {
+          setWorkspace(res.workspace);
+          setWorkspaceDirty(true);
+        }
+        const tree = await window.api.getFileTree();
+        if (tree) setFileTree(tree);
+      } finally {
+        setGlobalProgress(null);
       }
-      const tree = await window.api.getFileTree();
-      if (tree) setFileTree(tree);
     }
-  }, [setWorkspace, setFileTree, setWorkspaceDirty]);
+  }, [setWorkspace, setFileTree, setWorkspaceDirty, setGlobalProgress]);
 
   // Drag & Drop folder support
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -109,29 +120,35 @@ export function Sidebar() {
     setDragOver(false);
     const files = e.dataTransfer.files;
     console.log('[D&D Sidebar] DROP — files count:', files.length);
-    let added = false;
-    for (let i = 0; i < files.length; i++) {
-      const filePath = window.api.getPathForFile(files[i]);
-      console.log('[D&D Sidebar] file[' + i + ']:', filePath, 'name:', files[i].name);
-      if (filePath) {
-        const res = await window.api.addFolder(filePath);
-        console.log('[D&D Sidebar] addFolder result:', JSON.stringify({ added: res.added, hasWorkspace: !!res.workspace, folders: res.workspace?.folders }));
-        if (res.workspace) {
-          setWorkspace(res.workspace);
-          added = true;
+    setGlobalProgress({ message: 'Ordner werden hinzugefügt…', indeterminate: true });
+    try {
+      let added = false;
+      for (let i = 0; i < files.length; i++) {
+        const filePath = window.api.getPathForFile(files[i]);
+        console.log('[D&D Sidebar] file[' + i + ']:', filePath, 'name:', files[i].name);
+        if (filePath) {
+          const res = await window.api.addFolder(filePath);
+          console.log('[D&D Sidebar] addFolder result:', JSON.stringify({ added: res.added, hasWorkspace: !!res.workspace, folders: res.workspace?.folders }));
+          if (res.workspace) {
+            setWorkspace(res.workspace);
+            added = true;
+          }
         }
       }
+      if (added) {
+        setWorkspaceDirty(true);
+        setGlobalProgress({ message: 'Dateibaum wird geladen…', indeterminate: true });
+        console.log('[D&D Sidebar] Workspace updated, fetching file tree...');
+        const tree = await window.api.getFileTree();
+        console.log('[D&D Sidebar] File tree result:', tree ? 'got tree' : 'null');
+        if (tree) setFileTree(tree);
+      } else {
+        console.log('[D&D Sidebar] Nothing was added to workspace');
+      }
+    } finally {
+      setGlobalProgress(null);
     }
-    if (added) {
-      setWorkspaceDirty(true);
-      console.log('[D&D Sidebar] Workspace updated, fetching file tree...');
-      const tree = await window.api.getFileTree();
-      console.log('[D&D Sidebar] File tree result:', tree ? 'got tree' : 'null');
-      if (tree) setFileTree(tree);
-    } else {
-      console.log('[D&D Sidebar] Nothing was added to workspace');
-    }
-  }, [setWorkspace, setFileTree, setWorkspaceDirty]);
+  }, [setWorkspace, setFileTree, setWorkspaceDirty, setGlobalProgress]);
 
   return (
     <div

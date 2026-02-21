@@ -638,8 +638,57 @@
   gap: var(--space-1);
 }
 
+.statusbar-progress {
+  gap: 6px;
+  color: var(--accent-blue);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.statusbar-spinner {
+  animation: spin 1s linear infinite;
+}
+
 .statusbar-spacer {
   flex: 1;
+}
+
+/* ===== GLOBAL PROGRESS BAR ===== */
+.global-progress {
+  height: 3px;
+  width: 100%;
+  background: var(--border-color);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.global-progress-bar {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.global-progress-bar-fill {
+  height: 100%;
+  width: 30%;
+  background: var(--accent-blue);
+  border-radius: 0 2px 2px 0;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(200%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 
 /* ===== WELCOME SCREEN ===== */
@@ -1025,6 +1074,97 @@
 
 .settings-btn-primary:hover {
   opacity: 0.9;
+}
+
+/* ===== ABOUT DIALOG ===== */
+.about-dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-dropdown);
+}
+
+.about-body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-logo {
+  color: var(--accent-blue);
+  margin-bottom: 4px;
+}
+
+.about-app-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.about-version {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+  font-weight: 600;
+  background: rgba(var(--accent-blue-rgb, 137, 180, 250), 0.12);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.about-description {
+  margin: 8px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.about-details {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.about-row:last-child {
+  border-bottom: none;
+}
+
+.about-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.about-value {
+  color: var(--text-primary);
+}
+
+.about-link {
+  color: var(--accent-blue);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.about-link:hover {
+  text-decoration: underline;
 }
 
 /* ===== PDF VIEWER ===== */

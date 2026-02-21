@@ -2,6 +2,7 @@ import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
+import { useAppStore } from '../../store/appStore';
 
 interface ModelViewer3DProps {
   filePath: string;
@@ -20,15 +21,23 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState('Initializing...');
+  const setGlobalProgress = useAppStore(s => s.setGlobalProgress);
 
   useEffect(() => {
     let cancelled = false;
+
+    const updateProgress = (msg: string) => {
+      setProgress(msg);
+      if (msg) {
+        setGlobalProgress({ message: `3D: ${msg}`, indeterminate: true });
+      }
+    };
 
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        setProgress('Reading file...');
+        updateProgress('Reading file...');
 
         // Read file as base64 via IPC
         const base64 = await window.api.readFileBase64(filePath);
@@ -41,7 +50,7 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
           fileBuffer[i] = binary.charCodeAt(i);
         }
 
-        setProgress('Loading STEP parser...');
+        updateProgress('Loading STEP parser...');
 
         // Load WASM binary via IPC to bypass MIME type issues with dev server
         const wasmBase64 = await window.api.getWasmBinary('occt-import-js');
@@ -53,13 +62,13 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
         const occtInit = occtModule.default;
         if (cancelled) return;
 
-        setProgress('Initializing OCCT...');
+        updateProgress('Initializing OCCT...');
         const occt = await occtInit({
           wasmBinary,
         });
         if (cancelled) return;
 
-        setProgress('Parsing STEP file...');
+        updateProgress('Parsing STEP file...');
         const result = occt.ReadStepFile(fileBuffer, null);
         if (cancelled) return;
 
@@ -93,12 +102,16 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
       } finally {
         if (!cancelled) {
           setLoading(false);
+          setGlobalProgress(null);
         }
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [filePath]);
+    return () => {
+      cancelled = true;
+      setGlobalProgress(null);
+    };
+  }, [filePath, setGlobalProgress]);
 
   return (
     <div className="viewer-container">
