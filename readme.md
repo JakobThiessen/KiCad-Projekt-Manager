@@ -3,7 +3,6 @@
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?style=for-the-badge&logo=paypal)](https://paypal.me/jthiessen80) &nbsp; 
 [![X](https://srv-cdn.himpfen.io/badges/twitter/twitter-flat.svg)](https://x.com/JakobThiessen) &nbsp; 
 
-
 A desktop application for managing KiCad electronics projects — built with Electron, React and TypeScript.
 
 > Browse, organize, and preview your KiCad projects without leaving the app. View schematics, PCB layouts, Gerber files, 3D models, PDFs, images, and Markdown documentation — all in one place.
