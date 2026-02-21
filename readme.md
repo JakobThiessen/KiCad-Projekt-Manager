@@ -200,8 +200,6 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 
 ## Support
 
-<!-- Dies ist ein Kommentar und wird nicht gerendert
-
 If you find this project useful, consider supporting its development:
 
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?style=for-the-badge&logo=paypal)](https://paypal.me/jthiessen80)
