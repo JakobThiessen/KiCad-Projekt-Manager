@@ -8,11 +8,18 @@ interface ModelViewer3DProps {
   filePath: string;
 }
 
+interface BrepFace {
+  first: number;
+  last: number;
+  color: [number, number, number] | null;
+}
+
 interface ParsedMesh {
   positions: Float32Array;
   normals: Float32Array;
   indices: Uint32Array;
   color?: [number, number, number];
+  brepFaces?: BrepFace[];
 }
 
 export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
@@ -88,10 +95,19 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
             ? new Float32Array(mesh.attributes.normal.array)
             : new Float32Array(positions.length);
           const indices = new Uint32Array(mesh.index.array);
+          // occt-import-js colors are already in 0-1 range
           const color = mesh.color
-            ? [mesh.color[0] / 255, mesh.color[1] / 255, mesh.color[2] / 255] as [number, number, number]
+            ? [mesh.color[0], mesh.color[1], mesh.color[2]] as [number, number, number]
             : undefined;
-          parsedMeshes.push({ positions, normals, indices, color });
+          // Per-face colors from brep_faces
+          const brepFaces: BrepFace[] | undefined = mesh.brep_faces?.length
+            ? mesh.brep_faces.map((f: any) => ({
+                first: f.first,
+                last: f.last,
+                color: f.color ? [f.color[0], f.color[1], f.color[2]] as [number, number, number] : null,
+              }))
+            : undefined;
+          parsedMeshes.push({ positions, normals, indices, color, brepFaces });
         }
 
         if (cancelled) return;
@@ -255,6 +271,8 @@ function CameraPositioner({ center, size }: { center: THREE.Vector3; size: numbe
 }
 
 function StepMesh({ mesh }: { mesh: ParsedMesh }) {
+  const hasFaceColors = mesh.brepFaces?.some(f => f.color != null) ?? false;
+
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
@@ -274,8 +292,38 @@ function StepMesh({ mesh }: { mesh: ParsedMesh }) {
       geo.computeVertexNormals();
     }
 
+    // Apply per-face vertex colors from brep_faces if available
+    if (hasFaceColors && mesh.brepFaces) {
+      const vertexCount = mesh.positions.length / 3;
+      const colors = new Float32Array(vertexCount * 3);
+      // Default: use mesh-level color or neutral gray
+      const defaultR = mesh.color?.[0] ?? 0.7;
+      const defaultG = mesh.color?.[1] ?? 0.7;
+      const defaultB = mesh.color?.[2] ?? 0.75;
+      for (let i = 0; i < vertexCount; i++) {
+        colors[i * 3] = defaultR;
+        colors[i * 3 + 1] = defaultG;
+        colors[i * 3 + 2] = defaultB;
+      }
+      // Assign per-face colors: each face spans triangle indices [first..last]
+      for (const face of mesh.brepFaces) {
+        const fc = face.color ?? [defaultR, defaultG, defaultB];
+        for (let tri = face.first; tri <= face.last; tri++) {
+          for (let v = 0; v < 3; v++) {
+            const idx = mesh.indices[tri * 3 + v];
+            if (idx !== undefined) {
+              colors[idx * 3] = fc[0];
+              colors[idx * 3 + 1] = fc[1];
+              colors[idx * 3 + 2] = fc[2];
+            }
+          }
+        }
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    }
+
     return geo;
-  }, [mesh]);
+  }, [mesh, hasFaceColors]);
 
   const color = mesh.color
     ? new THREE.Color(mesh.color[0], mesh.color[1], mesh.color[2])
@@ -284,7 +332,8 @@ function StepMesh({ mesh }: { mesh: ParsedMesh }) {
   return (
     <mesh geometry={geometry}>
       <meshStandardMaterial
-        color={color}
+        color={hasFaceColors ? '#ffffff' : color}
+        vertexColors={hasFaceColors}
         roughness={0.4}
         metalness={0.3}
         side={THREE.DoubleSide}
