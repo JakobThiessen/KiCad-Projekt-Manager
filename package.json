@@ -1,6 +1,6 @@
 {
   "name": "kicad-project-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer",
   "main": "dist/main/main/main.js",
   "scripts": {

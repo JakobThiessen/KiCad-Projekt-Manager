@@ -24,6 +24,45 @@ interface ViewTransform {
   scale: number;
 }
 
+// ── Theme-aware color palette (set once per render frame) ──────────────
+interface SchPalette {
+  bg: string; grid: string;
+  wire: string; bus: string; junction: string; noConnect: string;
+  symbol: string; fillOutline: string; fillBg: string;
+  ref: string; val: string;
+  pinLine: string; pinName: string; pinNum: string; inverted: string;
+  netLabel: string; globalLabel: string; hierLabel: string;
+  sheetFill: string; sheetStroke: string; sheetName: string;
+  sheetFile: string; sheetHint: string; sheetPin: string;
+  info: string;
+}
+
+const SCH_DARK: SchPalette = {
+  bg: '#1e1e2e', grid: 'rgba(69, 71, 90, 0.4)',
+  wire: '#a6e3a1', bus: '#89b4fa', junction: '#a6e3a1', noConnect: '#f38ba8',
+  symbol: '#cba6f7', fillOutline: '#cba6f7', fillBg: 'rgba(49, 50, 68, 0.7)',
+  ref: '#f9e2af', val: '#94e2d5',
+  pinLine: '#a6e3a1', pinName: '#94e2d5', pinNum: '#f38ba8', inverted: '#cba6f7',
+  netLabel: '#89b4fa', globalLabel: '#f9e2af', hierLabel: '#f5c2e7',
+  sheetFill: 'rgba(166, 227, 161, 0.06)', sheetStroke: '#a6e3a1', sheetName: '#89dceb',
+  sheetFile: '#6c7086', sheetHint: 'rgba(137, 180, 250, 0.3)', sheetPin: '#f5c2e7',
+  info: '#6c7086',
+};
+
+const SCH_LIGHT: SchPalette = {
+  bg: '#ffffff', grid: 'rgba(0, 0, 0, 0.12)',
+  wire: '#40a02b', bus: '#1e66f5', junction: '#40a02b', noConnect: '#d20f39',
+  symbol: '#8839ef', fillOutline: '#8839ef', fillBg: 'rgba(204, 208, 218, 0.5)',
+  ref: '#df8e1d', val: '#179299',
+  pinLine: '#40a02b', pinName: '#179299', pinNum: '#d20f39', inverted: '#8839ef',
+  netLabel: '#1e66f5', globalLabel: '#df8e1d', hierLabel: '#ea76cb',
+  sheetFill: 'rgba(64, 160, 43, 0.06)', sheetStroke: '#40a02b', sheetName: '#04a5e5',
+  sheetFile: '#8c8fa1', sheetHint: 'rgba(30, 102, 245, 0.3)', sheetPin: '#ea76cb',
+  info: '#8c8fa1',
+};
+
+let C: SchPalette = SCH_DARK;
+
 export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +79,7 @@ export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
   const [currentFilePath, setCurrentFilePath] = useState(filePath);
   const [currentContent, setCurrentContent] = useState(content);
   const openTab = useAppStore(s => s.openTab);
+  const theme = useAppStore(s => s.theme);
 
   // Reset when the external content/filePath changes (new tab opened)
   useEffect(() => {
@@ -152,8 +192,11 @@ export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
+    // Set theme colors
+    C = theme === 'dark' ? SCH_DARK : SCH_LIGHT;
+
     // Clear
-    ctx.fillStyle = '#1e1e2e';
+    ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, rect.width, rect.height);
 
     ctx.save();
@@ -171,14 +214,14 @@ export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
     ctx.restore();
 
     // Info overlay
-    ctx.fillStyle = '#6c7086';
+    ctx.fillStyle = C.info;
     ctx.font = '11px "Segoe UI", sans-serif';
     ctx.fillText(`Zoom: ${(transform.scale * 100).toFixed(0)}%`, 8, rect.height - 8);
     ctx.fillText(
       `${schematic.symbols.length} symbols, ${schematic.wires.length} wires`,
       8, rect.height - 24,
     );
-  }, [schematic, transform, showGrid]);
+  }, [schematic, transform, showGrid, theme]);
 
   useEffect(() => {
     requestAnimationFrame(render);
@@ -260,20 +303,20 @@ export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
       {hierarchyStack.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
-          background: '#181825', borderBottom: '1px solid #313244',
-          fontSize: 11, color: '#cdd6f4', flexShrink: 0,
+          background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-color)',
+          fontSize: 11, color: 'var(--text-primary)', flexShrink: 0,
         }}>
           <button onClick={navigateUp} style={{
-            background: 'none', border: 'none', color: '#89b4fa', cursor: 'pointer',
+            background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 2, padding: '2px 4px', borderRadius: 3,
             fontSize: 11,
           }} title="Go up one level">
             <ArrowUp size={12} /> Up
           </button>
-          <ChevronRight size={10} style={{ color: '#585b70' }} />
+          <ChevronRight size={10} style={{ color: 'var(--bg-subtle)' }} />
           {hierarchyStack.map((p, i) => (
             <React.Fragment key={i}>
-              <span style={{ color: '#6c7086', cursor: 'pointer' }} onClick={async () => {
+              <span style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={async () => {
                 // Navigate to this level
                 const targetPath = p;
                 try {
@@ -284,10 +327,10 @@ export function SchematicViewer({ content, filePath }: SchematicViewerProps) {
                   setHasFitted(false);
                 } catch {}
               }}>{getFileName(p)}</span>
-              <ChevronRight size={10} style={{ color: '#585b70' }} />
+              <ChevronRight size={10} style={{ color: 'var(--bg-subtle)' }} />
             </React.Fragment>
           ))}
-          <span style={{ color: '#f9e2af' }}>{getFileName(currentFilePath)}</span>
+          <span style={{ color: 'var(--accent-yellow)' }}>{getFileName(currentFilePath)}</span>
         </div>
       )}
 
@@ -397,7 +440,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number, 
 
   if (gridPixels < 4) return; // too dense
 
-  ctx.fillStyle = 'rgba(69, 71, 90, 0.4)';
+  ctx.fillStyle = C.grid;
   const startX = -width / (2 * transform.scale) - transform.offsetX / transform.scale;
   const startY = -height / (2 * transform.scale) - transform.offsetY / transform.scale;
   const endX = startX + width / transform.scale;
@@ -420,7 +463,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number, 
 
 function drawSchematic(ctx: CanvasRenderingContext2D, sch: SchematicData) {
   // 1. Wires
-  ctx.strokeStyle = '#a6e3a1';
+  ctx.strokeStyle = C.wire;
   ctx.lineWidth = 0.15;
   ctx.lineCap = 'round';
   for (const wire of sch.wires) {
@@ -431,7 +474,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, sch: SchematicData) {
   }
 
   // 2. Buses
-  ctx.strokeStyle = '#89b4fa';
+  ctx.strokeStyle = C.bus;
   ctx.lineWidth = 0.35;
   ctx.lineCap = 'round';
   for (const bus of sch.buses) {
@@ -442,7 +485,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, sch: SchematicData) {
   }
 
   // 2b. Bus entries
-  ctx.strokeStyle = '#89b4fa';
+  ctx.strokeStyle = C.bus;
   ctx.lineWidth = 0.15;
   for (const be of sch.busEntries) {
     ctx.beginPath();
@@ -452,7 +495,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, sch: SchematicData) {
   }
 
   // 3. Junctions
-  ctx.fillStyle = '#a6e3a1';
+  ctx.fillStyle = C.junction;
   for (const junction of sch.junctions) {
     ctx.beginPath();
     ctx.arc(junction.x, junction.y, 0.4, 0, Math.PI * 2);
@@ -470,7 +513,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, sch: SchematicData) {
   }
 
   // 6. No-connects
-  ctx.strokeStyle = '#f38ba8';
+  ctx.strokeStyle = C.noConnect;
   ctx.lineWidth = 0.15;
   for (const nc of sch.noConnects) {
     const s = 0.6;
@@ -527,12 +570,12 @@ function drawSymbol(ctx: CanvasRenderingContext2D, symbol: SchematicElement, lib
     }
   } else {
     // Fallback: placeholder rectangle (un-flip for text)
-    ctx.strokeStyle = '#cba6f7';
+    ctx.strokeStyle = C.symbol;
     ctx.lineWidth = 0.2;
     ctx.strokeRect(-3, -2, 6, 4);
     ctx.save();
     ctx.scale(1, -1); // un-flip Y for text readability
-    ctx.fillStyle = '#f9e2af';
+    ctx.fillStyle = C.ref;
     ctx.font = '1px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -556,7 +599,7 @@ function drawSymbolProperties(ctx: CanvasRenderingContext2D, symbol: SchematicEl
     ctx.translate(prop.x, prop.y);
     // Property rotation is in screen coords (Y-down). KiCad stores CCW degrees.
     if (prop.rotation) ctx.rotate((-prop.rotation * Math.PI) / 180);
-    ctx.fillStyle = key === 'Reference' ? '#f9e2af' : '#94e2d5';
+    ctx.fillStyle = key === 'Reference' ? C.ref : C.val;
     const fontSize = Math.max(prop.fontSize || 1.27, 0.8);
     ctx.font = `${fontSize}px sans-serif`;
     ctx.textAlign = 'left';
@@ -574,7 +617,7 @@ function drawLibGraphics(ctx: CanvasRenderingContext2D, graphics: LibGraphic[]) 
   for (const g of graphics) {
     const sw = g.strokeWidth > 0 ? g.strokeWidth : 0.15;
     ctx.lineWidth = sw;
-    ctx.strokeStyle = '#cba6f7';
+    ctx.strokeStyle = C.symbol;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -624,10 +667,10 @@ function drawLibGraphics(ctx: CanvasRenderingContext2D, graphics: LibGraphic[]) 
 
 function applyFill(ctx: CanvasRenderingContext2D, fillType: string) {
   if (fillType === 'outline') {
-    ctx.fillStyle = '#cba6f7';
+    ctx.fillStyle = C.fillOutline;
     ctx.fill();
   } else if (fillType === 'background') {
-    ctx.fillStyle = 'rgba(49, 50, 68, 0.7)';
+    ctx.fillStyle = C.fillBg;
     ctx.fill();
   }
 }
@@ -683,7 +726,7 @@ function drawLibPins(ctx: CanvasRenderingContext2D, pins: LibPin[], libSym: LibS
     }
 
     // Pin line from origin toward +X by pin.length
-    ctx.strokeStyle = '#a6e3a1';
+    ctx.strokeStyle = C.pinLine;
     ctx.lineWidth = 0.1;
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -691,14 +734,14 @@ function drawLibPins(ctx: CanvasRenderingContext2D, pins: LibPin[], libSym: LibS
     ctx.stroke();
 
     // Small circle at the connection point (origin)
-    ctx.fillStyle = '#a6e3a1';
+    ctx.fillStyle = C.pinLine;
     ctx.beginPath();
     ctx.arc(0, 0, 0.18, 0, Math.PI * 2);
     ctx.fill();
 
     // Inverted pin indicator
     if (pin.graphicStyle === 'inverted' || pin.graphicStyle === 'inverted_clock') {
-      ctx.strokeStyle = '#cba6f7';
+      ctx.strokeStyle = C.inverted;
       ctx.lineWidth = 0.12;
       ctx.beginPath();
       ctx.arc(pin.length - 0.4, 0, 0.35, 0, Math.PI * 2);
@@ -710,7 +753,7 @@ function drawLibPins(ctx: CanvasRenderingContext2D, pins: LibPin[], libSym: LibS
       ctx.save();
       ctx.translate(pin.length + libSym.pinNamesOffset + 0.3, 0);
       ctx.scale(1, -1); // un-flip Y for readable text
-      ctx.fillStyle = '#94e2d5';
+      ctx.fillStyle = C.pinName;
       ctx.font = '1.0px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -723,7 +766,7 @@ function drawLibPins(ctx: CanvasRenderingContext2D, pins: LibPin[], libSym: LibS
       ctx.save();
       ctx.translate(pin.length / 2, 0.3);
       ctx.scale(1, -1); // un-flip Y for readable text
-      ctx.fillStyle = '#f38ba8';
+      ctx.fillStyle = C.pinNum;
       ctx.font = '0.8px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
@@ -749,12 +792,12 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: { text: string; x: numb
   if (angleDeg) ctx.rotate(angleRad);
 
   const colors: Record<string, string> = {
-    net: '#89b4fa',
-    global: '#f9e2af',
-    hierarchical: '#f5c2e7',
+    net: C.netLabel,
+    global: C.globalLabel,
+    hierarchical: C.hierLabel,
   };
 
-  ctx.fillStyle = colors[label.type] || '#89b4fa';
+  ctx.fillStyle = colors[label.type] || C.netLabel;
   const fontSize = 1.27;
   ctx.font = `${fontSize}px sans-serif`;
 
@@ -822,16 +865,16 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: { text: string; x: numb
 // ============================================================
 
 function drawSheet(ctx: CanvasRenderingContext2D, sheet: Sheet) {
-  // Sheet rectangle with fill — KiCad-like green tint
-  ctx.fillStyle = 'rgba(166, 227, 161, 0.06)';
+  // Sheet rectangle with fill
+  ctx.fillStyle = C.sheetFill;
   ctx.fillRect(sheet.x, sheet.y, sheet.width, sheet.height);
-  ctx.strokeStyle = '#a6e3a1';
+  ctx.strokeStyle = C.sheetStroke;
   ctx.lineWidth = 0.2;
   ctx.strokeRect(sheet.x, sheet.y, sheet.width, sheet.height);
 
   // Sheet name (top-left inside the rect)
   if (sheet.name) {
-    ctx.fillStyle = '#89dceb';
+    ctx.fillStyle = C.sheetName;
     ctx.font = 'bold 1.3px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -840,7 +883,7 @@ function drawSheet(ctx: CanvasRenderingContext2D, sheet: Sheet) {
 
   // File name (bottom-left inside the rect, smaller)
   if (sheet.fileName) {
-    ctx.fillStyle = '#6c7086';
+    ctx.fillStyle = C.sheetFile;
     ctx.font = '0.9px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
@@ -848,7 +891,7 @@ function drawSheet(ctx: CanvasRenderingContext2D, sheet: Sheet) {
   }
 
   // "Double-click to enter" hint (center)
-  ctx.fillStyle = 'rgba(137, 180, 250, 0.3)';
+  ctx.fillStyle = C.sheetHint;
   ctx.font = '0.8px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -856,12 +899,12 @@ function drawSheet(ctx: CanvasRenderingContext2D, sheet: Sheet) {
 
   // Sheet pins
   for (const pin of sheet.pins) {
-    ctx.fillStyle = '#f5c2e7';
+    ctx.fillStyle = C.sheetPin;
     ctx.beginPath();
     ctx.arc(pin.x, pin.y, 0.25, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#f5c2e7';
+    ctx.strokeStyle = C.sheetPin;
     ctx.lineWidth = 0.12;
     const isLeft = Math.abs(pin.x - sheet.x) < 0.5;
     const isRight = Math.abs(pin.x - (sheet.x + sheet.width)) < 0.5;
@@ -876,7 +919,7 @@ function drawSheet(ctx: CanvasRenderingContext2D, sheet: Sheet) {
     }
     ctx.stroke();
 
-    ctx.fillStyle = '#f5c2e7';
+    ctx.fillStyle = C.sheetPin;
     ctx.font = '0.9px sans-serif';
     ctx.textBaseline = 'middle';
     if (isLeft) {

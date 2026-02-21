@@ -22,6 +22,8 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState('Initializing...');
   const setGlobalProgress = useAppStore(s => s.setGlobalProgress);
+  const theme = useAppStore(s => s.theme);
+  const [exposure, setExposure] = useState(1.5);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +123,21 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
           {meshes.length > 0 && ` (${meshes.length} mesh${meshes.length !== 1 ? 'es' : ''})`}
         </span>
         <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Belichtung</span>
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.1"
+            value={exposure}
+            onChange={(e) => setExposure(parseFloat(e.target.value))}
+            style={{ width: '80px', accentColor: 'var(--accent-blue)' }}
+          />
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', minWidth: '28px' }}>
+            {exposure.toFixed(1)}
+          </span>
+        </div>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '0 8px' }}>
           Scroll to zoom, drag to rotate, right-click to pan
         </span>
@@ -145,10 +162,10 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
         ) : (
           <Canvas
             camera={{ fov: 45, near: 0.01, far: 100000 }}
-            style={{ background: '#11111b' }}
+            style={{ background: theme === 'dark' ? '#11111b' : '#dce0e8' }}
           >
             <Suspense fallback={null}>
-              <Scene3D meshes={meshes} />
+              <Scene3D meshes={meshes} theme={theme} exposure={exposure} />
             </Suspense>
           </Canvas>
         )}
@@ -157,7 +174,7 @@ export function ModelViewer3D({ filePath }: ModelViewer3DProps) {
   );
 }
 
-function Scene3D({ meshes }: { meshes: ParsedMesh[] }) {
+function Scene3D({ meshes, theme, exposure }: { meshes: ParsedMesh[]; theme: 'dark' | 'light'; exposure: number }) {
   const groupRef = useRef<THREE.Group>(null);
 
   // Calculate bounding box and auto-fit camera
@@ -180,10 +197,11 @@ function Scene3D({ meshes }: { meshes: ParsedMesh[] }) {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[size, size * 2, size]} intensity={0.8} />
-      <directionalLight position={[-size, size, -size]} intensity={0.3}/>
-      <hemisphereLight args={['#b1e1ff', '#44475a', 0.3]} />
+      <ambientLight intensity={0.6 * exposure} />
+      <directionalLight position={[size, size * 2, size]} intensity={1.0 * exposure} />
+      <directionalLight position={[-size, -size * 0.5, size * 0.8]} intensity={0.5 * exposure} />
+      <directionalLight position={[-size * 0.5, size, -size]} intensity={0.4 * exposure} />
+      <hemisphereLight args={[theme === 'dark' ? '#b1e1ff' : '#ffffff', theme === 'dark' ? '#44475a' : '#e6e9ef', 0.4 * exposure]} />
 
       {/* Controls */}
       <OrbitControls
@@ -203,10 +221,10 @@ function Scene3D({ meshes }: { meshes: ParsedMesh[] }) {
         args={[size * 4, size * 4]}
         cellSize={size / 20}
         cellThickness={0.5}
-        cellColor="#313244"
+        cellColor={theme === 'dark' ? '#313244' : '#bcc0cc'}
         sectionSize={size / 4}
         sectionThickness={1}
-        sectionColor="#45475a"
+        sectionColor={theme === 'dark' ? '#45475a' : '#9ca0b0'}
         fadeDistance={size * 4}
         position={[center.x, center.y - size / 2 - 0.01, center.z]}
       />

@@ -7,8 +7,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { KicadPcbParser, type PcbData, type PcbFootprint, type FpGraphic, type BoardLine, type PcbZone } from '../../parser/pcbParser';
-import { Eye, EyeOff, ZoomIn, ZoomOut, SquareDashedBottom, Layers, X } from 'lucide-react';
-
+import { Eye, EyeOff, ZoomIn, ZoomOut, SquareDashedBottom, Layers, X } from 'lucide-react';import { useAppStore } from '../../store/appStore';
 // ─── Layer colours (Catppuccin accents) ────────────────────────────────
 const LAYER_COLORS: Record<string, string> = {
   'F.Cu':      '#f38ba8',
@@ -84,6 +83,7 @@ function layerColor(name: string): string {
 interface Props { content: string; filePath: string }
 
 export function PcbViewer({ content, filePath }: Props) {
+  const theme = useAppStore(s => s.theme);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pcb, setPcb] = useState<PcbData | null>(null);
@@ -197,7 +197,7 @@ export function PcbViewer({ content, filePath }: Props) {
   }, []);
 
   // Trigger redraw on data / layer changes
-  useEffect(() => { requestDraw(); }, [pcb, visibleLayers, showGrid, requestDraw]);
+  useEffect(() => { requestDraw(); }, [pcb, visibleLayers, showGrid, requestDraw, theme]);
 
   // ── Main draw ────────────────────────────────────────────────────────
   // Keep drawRef always pointing to the latest closure
@@ -213,11 +213,11 @@ export function PcbViewer({ content, filePath }: Props) {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#1e1e2e';
+    ctx.fillStyle = theme === 'dark' ? '#1e1e2e' : '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
     // Grid
-    if (showGrid) drawDotGrid(ctx, w, h, offsetX, offsetY, scale);
+    if (showGrid) drawDotGrid(ctx, w, h, offsetX, offsetY, scale, theme === 'dark' ? '#31324460' : 'rgba(0,0,0,0.12)');
 
     ctx.save();
     ctx.translate(w / 2 + offsetX, h / 2 + offsetY);
@@ -227,12 +227,12 @@ export function PcbViewer({ content, filePath }: Props) {
       drawZones(ctx, pcb.zones, visibleLayers);
       drawBoardOutline(ctx, pcb.boardOutline, visibleLayers);
       drawGraphicItems(ctx, pcb.graphicItems, visibleLayers);
-      for (const fp of pcb.footprints) drawFootprint(ctx, fp, visibleLayers, scale);
+      for (const fp of pcb.footprints) drawFootprint(ctx, fp, visibleLayers, scale, theme === 'dark' ? '#1e1e2e' : '#ffffff');
       drawTracks(ctx, pcb.tracks, visibleLayers);
-      drawVias(ctx, pcb.vias, visibleLayers);
+      drawVias(ctx, pcb.vias, visibleLayers, theme === 'dark' ? '#1e1e2e' : '#ffffff');
     }
     ctx.restore();
-  }, [pcb, visibleLayers, showGrid]);
+  }, [pcb, visibleLayers, showGrid, theme]);
   drawRef.current = draw;
 
   // ── Mouse interaction (native listeners for non-passive wheel) ──────
@@ -310,7 +310,7 @@ export function PcbViewer({ content, filePath }: Props) {
       {/* Toolbar */}
       <div style={{
         position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4,
-        background: '#181825cc', borderRadius: 6, padding: '4px 6px',
+        background: theme === 'dark' ? '#181825cc' : '#e6e9efcc', borderRadius: 6, padding: '4px 6px',
       }}>
         <ToolBtn title="Zoom In" onClick={() => { transform.current.scale *= 1.25; requestDraw(); }}><ZoomIn size={16} /></ToolBtn>
         <ToolBtn title="Zoom Out" onClick={() => { transform.current.scale /= 1.25; requestDraw(); }}><ZoomOut size={16} /></ToolBtn>
@@ -322,16 +322,16 @@ export function PcbViewer({ content, filePath }: Props) {
       {showLayerPanel && (
         <div style={{
           position: 'absolute', top: 44, right: 8, width: 180, maxHeight: '70%', overflowY: 'auto',
-          background: '#181825ee', borderRadius: 8, padding: 8,
+          background: theme === 'dark' ? '#181825ee' : '#e6e9efee', borderRadius: 8, padding: 8,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ color: '#cdd6f4', fontSize: 12, fontWeight: 600 }}>Layers</span>
-            <X size={14} style={{ cursor: 'pointer', color: '#6c7086' }} onClick={() => setShowLayerPanel(false)} />
+            <span style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}>Layers</span>
+            <X size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setShowLayerPanel(false)} />
           </div>
           {allLayers.map(name => (
             <div key={name} onClick={() => toggleLayer(name)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '3px 4px', cursor: 'pointer',
-              borderRadius: 4, fontSize: 11, color: visibleLayers.has(name) ? '#cdd6f4' : '#585b70',
+              borderRadius: 4, fontSize: 11, color: visibleLayers.has(name) ? 'var(--text-primary)' : 'var(--text-muted)',
             }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: layerColor(name), display: 'inline-block', opacity: visibleLayers.has(name) ? 1 : 0.3 }} />
               {visibleLayers.has(name) ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -348,7 +348,7 @@ export function PcbViewer({ content, filePath }: Props) {
 function ToolBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button title={title} onClick={onClick} style={{
-      background: 'transparent', border: 'none', color: '#cdd6f4', cursor: 'pointer', padding: 4,
+      background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 4,
       borderRadius: 4, display: 'flex', alignItems: 'center',
     }}>{children}</button>
   );
@@ -356,11 +356,11 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
 
 // ─── Drawing helpers ───────────────────────────────────────────────────
 
-function drawDotGrid(ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, scale: number) {
+function drawDotGrid(ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number, scale: number, dotColor = '#31324460') {
   const gridMm = scale > 4 ? 0.5 : scale > 1.5 ? 1 : 2.54;
   const gs = gridMm * scale;
   if (gs < 6) return;
-  ctx.fillStyle = '#31324460';
+  ctx.fillStyle = dotColor;
   const cx = w / 2 + ox;
   const cy = h / 2 + oy;
   const startX = cx % gs;
@@ -479,7 +479,7 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: import('../../parser/
   }
 }
 
-function drawVias(ctx: CanvasRenderingContext2D, vias: import('../../parser/pcbParser').PcbVia[], visible: Set<string>) {
+function drawVias(ctx: CanvasRenderingContext2D, vias: import('../../parser/pcbParser').PcbVia[], visible: Set<string>, bgColor = '#1e1e2e') {
   for (const v of vias) {
     const show = v.layers.some(l => visible.has(l));
     if (!show) continue;
@@ -489,7 +489,7 @@ function drawVias(ctx: CanvasRenderingContext2D, vias: import('../../parser/pcbP
     ctx.arc(v.x, v.y, v.size / 2, 0, Math.PI * 2);
     ctx.fill();
     // Drill hole
-    ctx.fillStyle = '#1e1e2e';
+    ctx.fillStyle = bgColor;
     ctx.beginPath();
     ctx.arc(v.x, v.y, v.drill / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -512,7 +512,7 @@ function drawZones(ctx: CanvasRenderingContext2D, zones: PcbZone[], visible: Set
   }
 }
 
-function drawFootprint(ctx: CanvasRenderingContext2D, fp: PcbFootprint, visible: Set<string>, viewScale: number) {
+function drawFootprint(ctx: CanvasRenderingContext2D, fp: PcbFootprint, visible: Set<string>, viewScale: number, bgColor = '#1e1e2e') {
   ctx.save();
   ctx.translate(fp.x, fp.y);
   if (fp.rotation) ctx.rotate(fp.rotation * Math.PI / 180);
@@ -618,7 +618,7 @@ function drawFootprint(ctx: CanvasRenderingContext2D, fp: PcbFootprint, visible:
 
     // Drill hole for through-hole pads
     if (pad.drill > 0) {
-      ctx.fillStyle = '#1e1e2e';
+      ctx.fillStyle = bgColor;
       ctx.beginPath();
       ctx.arc(0, 0, pad.drill / 2, 0, Math.PI * 2);
       ctx.fill();
@@ -628,7 +628,7 @@ function drawFootprint(ctx: CanvasRenderingContext2D, fp: PcbFootprint, visible:
     if (viewScale > 3 && pad.number) {
       const fontSize = Math.min(pad.sizeX, pad.sizeY) * 0.5;
       if (fontSize * viewScale > 2) {
-        ctx.fillStyle = '#1e1e2e';
+        ctx.fillStyle = bgColor;
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
