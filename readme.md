@@ -25,8 +25,8 @@ graph LR
 - **Workspace Management** — Group multiple project folders into a single workspace (`.kicadws` file)
 - **Project Discovery** — Auto-detects `.kicad_pro` files, schematics, PCBs, Gerber, 3D models
 - **Integrated Viewers**
-  - KiCad Schematic (`.kicad_sch`) — canvas-based with pan/zoom
-  - KiCad PCB (`.kicad_pcb`) — layer-based rendering with visibility toggles
+  - KiCad Schematic (`.kicad_sch`) — powered by [KiCanvas](https://github.com/theacodes/kicanvas) (MIT), fully offline, with hierarchical sub-sheet loading
+  - KiCad PCB (`.kicad_pcb`) — KiCanvas-based, layer visibility, persistent layer state across files
   - Gerber (RS-274X) — built-in parser and renderer
   - 3D Models (STEP, VRML) — Three.js viewer with WASM-based STEP import
   - PDF, Images (PNG, JPG, SVG, …)
@@ -105,17 +105,23 @@ KiCad_ProjManager/
 │   ├── renderer/            # React frontend (Vite-bundled)
 │   │   ├── App.tsx          # Root layout component
 │   │   ├── main.tsx         # React entry point
+│   │   ├── public/          # Static assets served at root
+│   │   │   ├── kicanvas.js  # KiCanvas web component (MIT, offline bundle)
+│   │   │   └── fonts/
+│   │   │       └── MaterialSymbolsOutlined.woff2  # Icon font (offline)
 │   │   ├── components/      # UI components
-│   │   │   ├── TitleBar.tsx      # Custom titlebar + menu
-│   │   │   ├── Sidebar.tsx       # Project/file explorer
-│   │   │   ├── EditorArea.tsx    # Viewer routing
-│   │   │   ├── TabBar.tsx        # Editor tabs
-│   │   │   ├── StatusBar.tsx     # Bottom status bar
-│   │   │   ├── WelcomeScreen.tsx # Start screen
+│   │   │   ├── TitleBar.tsx           # Custom titlebar + menu
+│   │   │   ├── Sidebar.tsx            # Project/file explorer
+│   │   │   ├── EditorArea.tsx         # Viewer routing
+│   │   │   ├── TabBar.tsx             # Editor tabs
+│   │   │   ├── StatusBar.tsx          # Bottom status bar
+│   │   │   ├── WelcomeScreen.tsx      # Start screen
 │   │   │   ├── SettingsDialog.tsx
-│   │   │   └── viewers/     # File type viewers
-│   │   │       ├── SchematicViewer.tsx
-│   │   │       ├── PcbViewer.tsx
+│   │   │   ├── KeyboardShortcutsDialog.tsx  # Keyboard shortcut reference
+│   │   │   └── viewers/         # File type viewers
+│   │   │       ├── KiCanvasViewer.tsx   # Shared KiCanvas wrapper (sch + pcb)
+│   │   │       ├── SchematicViewer.tsx  # Delegates to KiCanvasViewer
+│   │   │       ├── PcbViewer.tsx        # Delegates to KiCanvasViewer
 │   │   │       ├── GerberViewer.tsx
 │   │   │       ├── ModelViewer3D.tsx
 │   │   │       ├── MarkdownViewer.tsx
@@ -124,10 +130,10 @@ KiCad_ProjManager/
 │   │   │       ├── ImageViewer.tsx
 │   │   │       └── TextViewer.tsx
 │   │   ├── store/
-│   │   │   └── appStore.ts  # Zustand state management
+│   │   │   └── appStore.ts      # Zustand state management
 │   │   ├── styles/
-│   │   │   ├── app.css      # Component styles
-│   │   │   └── global.css   # CSS variables, theme
+│   │   │   ├── app.css          # Component styles
+│   │   │   └── global.css       # CSS variables, theme
 │   │   ├── parser/          # KiCad file parsers
 │   │   └── editor/          # Editor tools (selection, commands)
 │   └── shared/              # Shared between main + renderer
@@ -167,6 +173,8 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 | Frontend | React 19, TypeScript 5.9 |
 | Bundler | Vite 7 |
 | State Management | Zustand 5 |
+| Schematic / PCB Viewer | KiCanvas (MIT, bundled offline) |
+| Icon Font | Material Symbols Outlined (bundled offline) |
 | 3D Rendering | Three.js + React Three Fiber |
 | STEP Import | occt-import-js (WASM) |
 | Markdown | react-markdown + remark-gfm + Mermaid |
