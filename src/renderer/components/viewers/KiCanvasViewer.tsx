@@ -11,6 +11,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Copy, CheckCheck } from 'lucide-react';
+import { useAppStore } from '../../store/appStore';
 
 // Script loader singleton
 let scriptState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
@@ -145,16 +146,33 @@ interface KiCanvasViewerProps {
 
 type ViewerState = 'loading' | 'ready' | 'error-legacy' | 'error-script' | 'error-render';
 
+/** Map app theme → KiCanvas theme attribute value */
+function kcTheme(appTheme: 'dark' | 'light'): string {
+  return appTheme === 'dark' ? 'witchhazel' : 'kicad';
+}
+
 export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerProps) {
   const [state, setState] = useState<ViewerState>('loading');
+  const [loadingStatus, setLoadingStatus] = useState('Datei wird geöffnet…');
   const [errorMessage, setErrorMessage] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const embedRef = useRef<HTMLElement | null>(null);
+  const appTheme = useAppStore(s => s.theme);
+
+  // Sync theme changes to already-mounted embed
+  useEffect(() => {
+    if (embedRef.current) {
+      embedRef.current.setAttribute('theme', kcTheme(appTheme));
+    }
+  }, [appTheme]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function setup() {
+      setState('loading');
+      setLoadingStatus('Datei wird geöffnet…');
+
       // 1. Legacy check
       const fmt = detectLegacyFormat(content, filePath);
       if (fmt.isLegacy) {
@@ -185,7 +203,12 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
       let fileMap: Map<string, string>;
       if (fileType === 'schematic') {
         try {
+          setLoadingStatus('Sub-Sheets werden aufgelöst…');
           fileMap = await loadSchematicTree(content, rootName, dirPath);
+          if (!cancelled) {
+            const count = fileMap.size;
+            setLoadingStatus(`${count} Datei${count !== 1 ? 'en' : ''} geladen – Ansicht wird aufgebaut…`);
+          }
         } catch (err: unknown) {
           if (cancelled) return;
           const msg = err instanceof Error ? err.message : String(err);
@@ -200,12 +223,12 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
       if (cancelled) return;
 
       // 5. Build kicanvas-embed imperatively with all sources already attached,
-      //    BEFORE inserting into the real DOM. This way kicanvas.connectedCallback
-      //    already sees all children and does not fire "No valid sources" warning.
+      //    BEFORE inserting into the real DOM.
       try {
         const embed = document.createElement('kicanvas-embed') as HTMLElement;
         embed.setAttribute('controls', 'full');
         embed.setAttribute('controlslist', 'nodownload');
+        embed.setAttribute('theme', kcTheme(useAppStore.getState().theme));
         embed.style.cssText = 'width:100%;height:100%;display:block;';
 
         // Root file first, then sub-sheets
@@ -222,7 +245,19 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
         container.innerHTML = '';
         container.appendChild(embed);
         embedRef.current = embed;
-        setState('ready');
+
+        // 6. Wait for KiCanvas to finish rendering before revealing the viewer.
+        //    Use the kicanvas:load event, with a 6 s timeout as fallback.
+        if (!cancelled) setLoadingStatus('Schaltplan wird gerendert…');
+        await new Promise<void>(resolve => {
+          if (cancelled) { resolve(); return; }
+          const timeout = setTimeout(resolve, 6000);
+          embed.addEventListener('kicanvas:load', () => { clearTimeout(timeout); resolve(); }, { once: true });
+          // Also listen for error event as fallback
+          embed.addEventListener('kicanvas:error', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        });
+
+        if (!cancelled) setState('ready');
       } catch (err: unknown) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -254,16 +289,18 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
 
   return (
     <div className="kc-viewer-wrapper">
+      {/* Loading overlay — covers everything until KiCanvas fires kicanvas:load */}
       {state === 'loading' && (
         <div className="kc-loading-overlay">
           <div className="spinner" />
-          <span>Lade Dateien…</span>
+          <span className="kc-loading-label">{loadingStatus}</span>
         </div>
       )}
+      {/* Container is in DOM during loading so ref is valid, but invisible */}
       <div
         ref={containerRef}
         className="kc-embed-container"
-        style={{ width: '100%', height: '100%', display: state === 'ready' ? 'block' : 'none' }}
+        style={{ width: '100%', height: '100%', visibility: state === 'ready' ? 'visible' : 'hidden' }}
       />
     </div>
   );

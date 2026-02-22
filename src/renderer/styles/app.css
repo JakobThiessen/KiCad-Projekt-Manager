@@ -1280,7 +1280,18 @@
   background: var(--bg-base);
   color: var(--text-muted);
   font-size: var(--font-size-sm);
-  z-index: 10;
+  z-index: 20;
+}
+
+.kc-loading-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.kc-loading-sub {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .kc-embed-container {
