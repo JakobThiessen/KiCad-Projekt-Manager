@@ -153,7 +153,7 @@ function kcTheme(appTheme: 'dark' | 'light'): string {
 
 export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerProps) {
   const [state, setState] = useState<ViewerState>('loading');
-  const [loadingStatus, setLoadingStatus] = useState('Datei wird geöffnet…');
+  const [loadingStatus, setLoadingStatus] = useState('Opening file…');
   const [errorMessage, setErrorMessage] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const embedRef = useRef<HTMLElement | null>(null);
@@ -171,7 +171,7 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
 
     async function setup() {
       setState('loading');
-      setLoadingStatus('Datei wird geöffnet…');
+      setLoadingStatus('Opening file…');
 
       // 1. Legacy check
       const fmt = detectLegacyFormat(content, filePath);
@@ -203,11 +203,11 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
       let fileMap: Map<string, string>;
       if (fileType === 'schematic') {
         try {
-          setLoadingStatus('Sub-Sheets werden aufgelöst…');
+          setLoadingStatus('Resolving sub-sheets…');
           fileMap = await loadSchematicTree(content, rootName, dirPath);
           if (!cancelled) {
             const count = fileMap.size;
-            setLoadingStatus(`${count} Datei${count !== 1 ? 'en' : ''} geladen – Ansicht wird aufgebaut…`);
+            setLoadingStatus(`${count} file${count !== 1 ? 's' : ''} loaded — building view…`);
           }
         } catch (err: unknown) {
           if (cancelled) return;
@@ -248,7 +248,7 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
 
         // 6. Wait for KiCanvas to finish rendering before revealing the viewer.
         //    Use the kicanvas:load event, with a 6 s timeout as fallback.
-        if (!cancelled) setLoadingStatus('Schaltplan wird gerendert…');
+        if (!cancelled) setLoadingStatus('Rendering…');
         await new Promise<void>(resolve => {
           if (cancelled) { resolve(); return; }
           const timeout = setTimeout(resolve, 6000);
