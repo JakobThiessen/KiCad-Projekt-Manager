@@ -1,6 +1,6 @@
 {
   "name": "kicad-project-manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer",
   "main": "dist/main/main/main.js",
   "scripts": {
@@ -40,6 +40,7 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@tracespace/core": "^5.0.0-alpha.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "lucide-react": "^0.575.0",

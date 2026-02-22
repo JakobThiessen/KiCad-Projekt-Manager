@@ -387,6 +387,12 @@ function setupIpcHandlers(): void {
     return true;
   });
 
+  ipcMain.handle(IPC_CHANNELS.LIST_DIR, async (_event, dirPath: string) => {
+    const fs = await import('fs/promises');
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    return entries.filter(e => e.isFile()).map(e => e.name);
+  });
+
   // WASM binary loading - reads WASM files from node_modules (dev) or dist assets (production)
   ipcMain.handle(IPC_CHANNELS.GET_WASM_BINARY, async (_event, moduleName: string) => {
     const fsP = await import('fs/promises');

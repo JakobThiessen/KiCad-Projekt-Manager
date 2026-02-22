@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke(IPC_CHANNELS.READ_FILE_BASE64, filePath),
   writeFile: (filePath: string, content: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.WRITE_FILE, filePath, content),
+  listDir: (dirPath: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.LIST_DIR, dirPath),
   getFileTree: () =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_FILE_TREE),
   onFileChanged: (callback: (filePath: string) => void) => {

@@ -26,6 +26,11 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
+    rollupOptions: {
+      // Prevent bundling Node.js built-ins that appear in dead-code paths
+      // of browser-compatible libraries (e.g. @tracespace/core's read() fn)
+      external: (id) => id.startsWith('node:'),
+    },
   },
   resolve: {
     alias: {

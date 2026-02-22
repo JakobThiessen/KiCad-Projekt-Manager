@@ -4,7 +4,7 @@ import { useAppStore } from '../store/appStore';
 
 const APP_INFO = {
   name: 'KiCad Project Manager',
-  version: '1.0.3',
+  version: '1.0.4',
   description: 'KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer',
   author: 'JThiessen',
   license: 'MIT',
@@ -20,12 +20,7 @@ interface ThirdPartyLicense {
 }
 
 const THIRD_PARTY: ThirdPartyLicense[] = [
-  {
-    name: 'KiCanvas',
-    author: 'Alethea Katherine Flowers',
-    license: 'MIT',
-    url: 'https://github.com/theacodes/kicanvas',
-  },
+  // ── Core runtime ────────────────────────────────────────────────────────────
   {
     name: 'Electron',
     author: 'OpenJS Foundation',
@@ -34,6 +29,12 @@ const THIRD_PARTY: ThirdPartyLicense[] = [
   },
   {
     name: 'React',
+    author: 'Meta Platforms, Inc.',
+    license: 'MIT',
+    url: 'https://react.dev',
+  },
+  {
+    name: 'React DOM',
     author: 'Meta Platforms, Inc.',
     license: 'MIT',
     url: 'https://react.dev',
@@ -49,6 +50,13 @@ const THIRD_PARTY: ThirdPartyLicense[] = [
     author: 'Lucide Contributors',
     license: 'ISC',
     url: 'https://lucide.dev',
+  },
+  // ── KiCad Schematic / PCB viewer ────────────────────────────────────────────
+  {
+    name: 'KiCanvas',
+    author: 'Alethea Katherine Flowers',
+    license: 'MIT',
+    url: 'https://github.com/theacodes/kicanvas',
   },
   {
     name: 'Earcut (via KiCanvas)',
@@ -79,6 +87,95 @@ const THIRD_PARTY: ThirdPartyLicense[] = [
     author: 'Kemie Guaida',
     license: 'SIL Open Font License',
     url: 'https://fonts.google.com/specimen/Bellota',
+  },
+  // ── Gerber viewer ───────────────────────────────────────────────────────────
+  {
+    name: 'Tracespace Core (@tracespace/core)',
+    author: 'Mike Cousins',
+    license: 'MIT',
+    url: 'https://github.com/tracespace/tracespace',
+  },
+  {
+    name: 'Tracespace Parser (@tracespace/parser)',
+    author: 'Mike Cousins',
+    license: 'MIT',
+    url: 'https://github.com/tracespace/tracespace',
+  },
+  {
+    name: 'Tracespace Plotter (@tracespace/plotter)',
+    author: 'Mike Cousins',
+    license: 'MIT',
+    url: 'https://github.com/tracespace/tracespace',
+  },
+  {
+    name: 'Tracespace Renderer (@tracespace/renderer)',
+    author: 'Mike Cousins',
+    license: 'MIT',
+    url: 'https://github.com/tracespace/tracespace',
+  },
+  {
+    name: 'Tracespace Identify Layers (@tracespace/identify-layers)',
+    author: 'Mike Cousins',
+    license: 'MIT',
+    url: 'https://github.com/tracespace/tracespace',
+  },
+  // ── 3D Model viewer ─────────────────────────────────────────────────────────
+  {
+    name: 'Three.js',
+    author: 'mrdoob and contributors',
+    license: 'MIT',
+    url: 'https://github.com/mrdoob/three.js',
+  },
+  {
+    name: 'React Three Fiber (@react-three/fiber)',
+    author: 'Poimandres (pmndrs)',
+    license: 'MIT',
+    url: 'https://github.com/pmndrs/react-three-fiber',
+  },
+  {
+    name: 'React Three Drei (@react-three/drei)',
+    author: 'Poimandres (pmndrs)',
+    license: 'MIT',
+    url: 'https://github.com/pmndrs/drei',
+  },
+  {
+    name: 'occt-import-js',
+    author: 'Viktor Kovacs',
+    license: 'MIT',
+    url: 'https://github.com/kovacsv/occt-import-js',
+  },
+  // ── PDF viewer ──────────────────────────────────────────────────────────────
+  {
+    name: 'PDF.js (pdfjs-dist)',
+    author: 'Mozilla Foundation',
+    license: 'Apache 2.0',
+    url: 'https://github.com/mozilla/pdf.js',
+  },
+  // ── Markdown viewer ─────────────────────────────────────────────────────────
+  {
+    name: 'react-markdown',
+    author: 'Titus Wormer and contributors',
+    license: 'MIT',
+    url: 'https://github.com/remarkjs/react-markdown',
+  },
+  {
+    name: 'remark-gfm',
+    author: 'Titus Wormer and contributors',
+    license: 'MIT',
+    url: 'https://github.com/remarkjs/remark-gfm',
+  },
+  {
+    name: 'Mermaid',
+    author: 'Knut Sveidqvist and contributors',
+    license: 'MIT',
+    url: 'https://github.com/mermaid-js/mermaid',
+  },
+  // ── Terminal ─────────────────────────────────────────────────────────────────
+  {
+    name: 'xterm.js (@xterm/xterm)',
+    author: 'The xterm.js authors',
+    license: 'MIT',
+    url: 'https://github.com/xtermjs/xterm.js',
   },
 ];
 

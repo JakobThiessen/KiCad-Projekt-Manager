@@ -17,7 +17,8 @@ export function getKicadFileType(filePath: string): import('./types').KicadFileT
     case '.kicad_mod': return 'footprint';
     case '.gbr': case '.gtl': case '.gbl': case '.gts': case '.gbs':
     case '.gto': case '.gbo': case '.gtp': case '.gbp':
-    case '.gm1': case '.gko': case '.drl': case '.xln':
+    case '.gm1': case '.gm2': case '.gm3': case '.gko':
+    case '.drl': case '.xln': case '.exc': case '.g2l': case '.g3l':
       return 'gerber';
     case '.step': case '.stp': case '.wrl': case '.vrml':
       return '3d-model';
@@ -47,8 +48,10 @@ export const KICAD_EXTENSIONS = [
 /** Gerber file extensions */
 export const GERBER_EXTENSIONS = [
   '.gbr', '.gtl', '.gbl', '.gts', '.gbs',
-  '.gto', '.gbo', '.gtp', '.gbp', '.gm1',
-  '.gko', '.drl', '.xln', '.gbrjob',
+  '.gto', '.gbo', '.gtp', '.gbp',
+  '.gm1', '.gm2', '.gm3', '.gko',
+  '.drl', '.xln', '.exc', '.g2l', '.g3l',
+  '.gbrjob',
 ] as const;
 
 /** 3D model extensions */

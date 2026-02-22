@@ -11,6 +11,15 @@
         "/^npx vite build 2>&1 \\| Select-Object -First 30$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "npm install": true,
+        "/^cmd /c \"cd /d d:\\\\Proj\\\\KiCad-Projekt-Manager && npm install @tracespace/core\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cmd /c \"dir /b d:\\\\Proj\\\\KiCad-Projekt-Manager\\\\node_modules\\\\@tracespace\\\\core\\\\src\"$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

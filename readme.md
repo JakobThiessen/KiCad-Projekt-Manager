@@ -27,7 +27,7 @@ graph LR
 - **Integrated Viewers**
   - KiCad Schematic (`.kicad_sch`) — powered by [KiCanvas](https://github.com/theacodes/kicanvas) (MIT), fully offline, with hierarchical sub-sheet loading
   - KiCad PCB (`.kicad_pcb`) — KiCanvas-based, layer visibility, persistent layer state across files
-  - Gerber (RS-274X) — built-in parser and renderer
+  - Gerber (RS-274X / Excellon) — powered by [Tracespace](https://github.com/tracespace/tracespace) (MIT); scans the entire output folder automatically, stacks all copper, soldermask, silkscreen, drill and outline layers into a single PCB composite view, individual layer toggle
   - 3D Models (STEP, VRML) — Three.js viewer with WASM-based STEP import
   - PDF, Images (PNG, JPG, SVG, …)
   - Markdown with Mermaid diagram support
@@ -175,8 +175,10 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 | State Management | Zustand 5 |
 | Schematic / PCB Viewer | KiCanvas (MIT, bundled offline) |
 | Icon Font | Material Symbols Outlined (bundled offline) |
-| 3D Rendering | Three.js + React Three Fiber |
+| Gerber Viewer | Tracespace 5 (parser, plotter, renderer — MIT) |
+| 3D Rendering | Three.js + React Three Fiber + React Three Drei |
 | STEP Import | occt-import-js (WASM) |
+| PDF Viewer | PDF.js (pdfjs-dist, Apache 2.0) |
 | Markdown | react-markdown + remark-gfm + Mermaid |
 | Icons | Lucide React |
 | Packaging | electron-builder |

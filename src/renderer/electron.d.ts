@@ -18,6 +18,7 @@ export interface ElectronAPI {
   readFile(filePath: string): Promise<string>;
   readFileBase64(filePath: string): Promise<string>;
   writeFile(filePath: string, content: string): Promise<boolean>;
+  listDir(dirPath: string): Promise<string[]>;
   getFileTree(): Promise<FileTreeNode>;
   onFileChanged(callback: (filePath: string) => void): () => void;
 

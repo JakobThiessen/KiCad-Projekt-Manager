@@ -120,6 +120,9 @@ export const IPC_CHANNELS = {
   // Workspace filter
   SET_WORKSPACE_FILTER: 'workspace:setFilter',
 
+  // File listing
+  LIST_DIR: 'file:listDir',
+
   // WASM
   GET_WASM_BINARY: 'wasm:getBinary',
 
