@@ -1283,6 +1283,10 @@
   z-index: 10;
 }
 
+.kc-embed-container {
+  overflow: hidden;
+}
+
 /* Error box */
 .kc-error-wrapper {
   width: 100%;

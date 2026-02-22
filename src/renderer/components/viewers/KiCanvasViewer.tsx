@@ -1,29 +1,18 @@
-/**
+﻿/**
  * KiCanvasViewer — wraps the KiCanvas web-component (<kicanvas-embed>)
- * for offline use. kicanvas.js is bundled locally in /public/kicanvas.js.
+ * for fully offline use. kicanvas.js lives in /public/kicanvas.js (local).
  *
  * Supports KiCad 6, 7, 8, 9 (.kicad_sch / .kicad_pcb).
- * KiCad 5 and legacy formats are detected early and shown as a copyable error.
+ * For schematics, ALL sub-sheets are resolved recursively from disk so
+ * KiCanvas receives a complete virtual filesystem.
+ *
+ * KiCad 5 / legacy formats are detected early and shown as a copyable error.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Copy, CheckCheck } from 'lucide-react';
 
-// ── TypeScript declarations for the KiCanvas web components ──────────
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'kicanvas-embed': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        controls?: string;
-        controlslist?: string;
-        theme?: string;
-      }, HTMLElement>;
-      'kicanvas-source': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-    }
-  }
-}
-
-// ── Script loader (singleton) ─────────────────────────────────────────
+// Script loader singleton
 let scriptState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
 const scriptCallbacks: Array<(ok: boolean) => void> = [];
 
@@ -31,121 +20,123 @@ function loadKiCanvasScript(): Promise<boolean> {
   return new Promise(resolve => {
     if (scriptState === 'ready') { resolve(true); return; }
     if (scriptState === 'error') { resolve(false); return; }
-
     scriptCallbacks.push(resolve);
-
     if (scriptState === 'loading') return;
     scriptState = 'loading';
-
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = './kicanvas.js';
-    script.onload = () => {
-      scriptState = 'ready';
-      scriptCallbacks.forEach(cb => cb(true));
-      scriptCallbacks.length = 0;
-    };
-    script.onerror = () => {
-      scriptState = 'error';
-      scriptCallbacks.forEach(cb => cb(false));
-      scriptCallbacks.length = 0;
-    };
-    document.head.appendChild(script);
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.src = './kicanvas.js';
+    s.onload = () => { scriptState = 'ready'; scriptCallbacks.splice(0).forEach(cb => cb(true)); };
+    s.onerror = () => { scriptState = 'error'; scriptCallbacks.splice(0).forEach(cb => cb(false)); };
+    document.head.appendChild(s);
   });
 }
 
-// ── KiCad 5 / legacy format detection ────────────────────────────────
-interface FormatInfo {
-  isLegacy: boolean;
-  reason: string;
-}
+// KiCad 5 / legacy format detection
+interface FormatCheck { isLegacy: boolean; reason: string; }
 
-function detectFormat(content: string, filePath: string): FormatInfo {
-  const trimmed = content.trimStart();
-
-  // KiCad 5 schematic — plain text, starts with EESchema
-  if (trimmed.startsWith('EESchema')) {
+function detectLegacyFormat(content: string, filePath: string): FormatCheck {
+  const t = content.trimStart();
+  if (t.startsWith('EESchema')) {
     return {
       isLegacy: true,
       reason:
         'Diese Datei ist ein KiCad 5 Schaltplan (EESchema-Format).\n' +
-        'KiCanvas unterstützt nur KiCad 6 und neuer.\n\n' +
+        'KiCanvas unterstuetzt nur KiCad 6 und neuer.\n\n' +
         `Datei: ${filePath}\n` +
         'Formatkennung: EESchema (Legacy .sch)',
     };
   }
-
-  // KiCad 5 PCB — plain text, starts with (kicad_pcb (version N) with N < 20210000
-  const pcbVerMatch = trimmed.match(/^\(kicad_pcb\s+\(version\s+(\d+)/);
-  if (pcbVerMatch) {
-    const ver = parseInt(pcbVerMatch[1], 10);
-    if (ver < 20210000) {
-      return {
-        isLegacy: true,
-        reason:
-          `Diese PCB-Datei verwendet das Legacy-Format (Version ${ver}).\n` +
-          'KiCanvas unterstützt nur KiCad 6+ Format (Version ≥ 20210000).\n\n' +
-          `Datei: ${filePath}\n` +
-          `Format-Version: ${ver}`,
-      };
-    }
+  const pcbV = t.match(/^\(kicad_pcb\s+\(version\s+(\d+)/);
+  if (pcbV && parseInt(pcbV[1], 10) < 20210000) {
+    return {
+      isLegacy: true,
+      reason:
+        `PCB-Datei im Legacy-Format (Version ${pcbV[1]}).\n` +
+        'KiCanvas unterstuetzt nur KiCad 6+ (Version >=20210000).\n\n' +
+        `Datei: ${filePath}`,
+    };
   }
-
-  // KiCad 5 sch in new-style wrapper (extremely rare, but guard anyway)
-  const schVerMatch = trimmed.match(/^\(kicad_sch\s+\(version\s+(\d+)/);
-  if (schVerMatch) {
-    const ver = parseInt(schVerMatch[1], 10);
-    if (ver < 20210000) {
-      return {
-        isLegacy: true,
-        reason:
-          `Diese Schaltplan-Datei verwendet ein sehr altes Format (Version ${ver}).\n` +
-          'KiCanvas unterstützt nur KiCad 6+ Format (Version ≥ 20210000).\n\n' +
-          `Datei: ${filePath}\n` +
-          `Format-Version: ${ver}`,
-      };
-    }
+  const schV = t.match(/^\(kicad_sch\s+\(version\s+(\d+)/);
+  if (schV && parseInt(schV[1], 10) < 20210000) {
+    return {
+      isLegacy: true,
+      reason:
+        `Schaltplan im alten Format (Version ${schV[1]}).\n` +
+        'KiCanvas unterstuetzt nur KiCad 6+ (Version >=20210000).\n\n' +
+        `Datei: ${filePath}`,
+    };
   }
-
   return { isLegacy: false, reason: '' };
 }
 
-// ── Copyable error box ────────────────────────────────────────────────
+// Sub-sheet resolver
+function extractSubSheetNames(content: string): string[] {
+  const names: string[] = [];
+  const re = /\(property\s+"?Sheetfile"?\s+"([^"]+)"/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    const name = m[1].trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+async function loadSchematicTree(
+  rootContent: string,
+  rootName: string,
+  dirPath: string,
+): Promise<Map<string, string>> {
+  const files = new Map<string, string>();
+  files.set(rootName, rootContent);
+  const seen = new Set<string>([rootName]);
+  const queue = extractSubSheetNames(rootContent);
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const sep = dirPath.includes('\\') ? '\\' : '/';
+    const absPath = dirPath + sep + name;
+    try {
+      const sub: string = await window.api.readFile(absPath);
+      files.set(name, sub);
+      extractSubSheetNames(sub).forEach(n => { if (!seen.has(n)) queue.push(n); });
+    } catch {
+      files.set(name, `; Sub-sheet not found: ${absPath}\n`);
+    }
+  }
+  return files;
+}
+
+// Copyable error box
 function ErrorBox({ title, message }: { title: string; message: string }) {
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
+  const copy = () =>
     navigator.clipboard.writeText(message).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2200);
     });
-  };
-
   return (
     <div className="kc-error-wrapper">
       <div className="kc-error-box">
         <div className="kc-error-header">
           <AlertTriangle size={18} className="kc-error-icon" />
           <span className="kc-error-title">{title}</span>
-          <button
-            className="kc-error-copy-btn"
-            onClick={handleCopy}
-            title="Fehlermeldung kopieren"
-          >
+          <button className="kc-error-copy-btn" onClick={copy} title="Fehlermeldung kopieren">
             {copied ? <CheckCheck size={14} /> : <Copy size={14} />}
             {copied ? 'Kopiert!' : 'Kopieren'}
           </button>
         </div>
         <pre className="kc-error-message">{message}</pre>
         <p className="kc-error-hint">
-          Du kannst diese Meldung kopieren und nach einer Lösung suchen.
+          Diese Meldung kopieren und im Browser / Issue-Tracker suchen.
         </p>
       </div>
     </div>
   );
 }
 
-// ── Main KiCanvasViewer component ─────────────────────────────────────
+// Main component
 interface KiCanvasViewerProps {
   content: string;
   filePath: string;
@@ -157,84 +148,108 @@ type ViewerState = 'loading' | 'ready' | 'error-legacy' | 'error-script' | 'erro
 export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerProps) {
   const [state, setState] = useState<ViewerState>('loading');
   const [errorMessage, setErrorMessage] = useState('');
-  const embedRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const embedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    // 1. Pre-check for legacy formats
-    const fmt = detectFormat(content, filePath);
-    if (fmt.isLegacy) {
-      setErrorMessage(fmt.reason);
-      setState('error-legacy');
-      return;
-    }
+    let cancelled = false;
 
-    // 2. Load kicanvas.js if not yet loaded
-    loadKiCanvasScript().then(ok => {
+    async function setup() {
+      // 1. Legacy check
+      const fmt = detectLegacyFormat(content, filePath);
+      if (fmt.isLegacy) {
+        if (!cancelled) { setErrorMessage(fmt.reason); setState('error-legacy'); }
+        return;
+      }
+
+      // 2. Load kicanvas.js
+      const ok = await loadKiCanvasScript();
+      if (cancelled) return;
       if (!ok) {
         setErrorMessage(
           'kicanvas.js konnte nicht geladen werden.\n\n' +
-          'Die lokale Datei public/kicanvas.js fehlt oder ist beschädigt.\n' +
+          'Die lokale Datei public/kicanvas.js fehlt oder ist beschaedigt.\n' +
           `Datei: ${filePath}`,
         );
         setState('error-script');
         return;
       }
 
-      // 3. Mount the inline source into the <kicanvas-embed> element
-      const embed = embedRef.current;
-      if (!embed) { setState('error-render'); return; }
+      // 3. Determine directory and root filename
+      const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+      const dirPath = filePath.slice(0, lastSlash);
+      const normPath = filePath.replace(/\\/g, '/');
+      const rootName = normPath.split('/').pop() ?? 'file';
 
+      // 4. Load all needed files
+      let fileMap: Map<string, string>;
+      if (fileType === 'schematic') {
+        try {
+          fileMap = await loadSchematicTree(content, rootName, dirPath);
+        } catch (err: unknown) {
+          if (cancelled) return;
+          const msg = err instanceof Error ? err.message : String(err);
+          setErrorMessage(`Fehler beim Laden der Sub-Sheets:\n${msg}\n\nDatei: ${filePath}`);
+          setState('error-render');
+          return;
+        }
+      } else {
+        fileMap = new Map([[rootName, content]]);
+      }
+
+      if (cancelled) return;
+
+      // 5. Build kicanvas-embed imperatively with all sources already attached,
+      //    BEFORE inserting into the real DOM. This way kicanvas.connectedCallback
+      //    already sees all children and does not fire "No valid sources" warning.
       try {
-        // Remove any previous kicanvas-source children
-        while (embed.firstChild) embed.removeChild(embed.firstChild);
+        const embed = document.createElement('kicanvas-embed') as HTMLElement;
+        embed.setAttribute('controls', 'full');
+        embed.setAttribute('controlslist', 'nodownload');
+        embed.style.cssText = 'width:100%;height:100%;display:block;';
 
-        // Create <kicanvas-source> with inline KiCad content
-        const source = document.createElement('kicanvas-source');
-        const mimeType = fileType === 'schematic' ? 'schematic' : 'board';
-        source.setAttribute('type', mimeType);
-        // Use the last filename component as name so KiCanvas can cross-reference sheets
-        const name = filePath.replace(/\\/g, '/').split('/').pop() ?? 'file';
-        source.setAttribute('name', name);
-        source.textContent = content;
-        embed.appendChild(source);
+        // Root file first, then sub-sheets
+        const ordered = [rootName, ...[...fileMap.keys()].filter(k => k !== rootName)];
+        for (const name of ordered) {
+          const src = document.createElement('kicanvas-source') as HTMLElement;
+          src.setAttribute('name', name);
+          src.textContent = fileMap.get(name) ?? '';
+          embed.appendChild(src);
+        }
 
+        const container = containerRef.current;
+        if (!container || cancelled) return;
+        container.innerHTML = '';
+        container.appendChild(embed);
+        embedRef.current = embed;
         setState('ready');
       } catch (err: unknown) {
+        if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
-        setErrorMessage(
-          `Fehler beim Rendern der Datei:\n${msg}\n\nDatei: ${filePath}`,
-        );
+        setErrorMessage(`Fehler beim Rendern:\n${msg}\n\nDatei: ${filePath}`);
         setState('error-render');
       }
-    });
+    }
+
+    setup();
+
+    return () => {
+      cancelled = true;
+      if (embedRef.current) {
+        embedRef.current.remove();
+        embedRef.current = null;
+      }
+    };
   }, [content, filePath, fileType]);
 
-  // ── Render ──────────────────────────────────────────────────────────
   if (state === 'error-legacy') {
-    return (
-      <ErrorBox
-        title="Nicht unterstütztes KiCad-Format (KiCad 5 / Legacy)"
-        message={errorMessage}
-      />
-    );
+    return <ErrorBox title="Nicht unterstuetztes KiCad-Format (KiCad 5 / Legacy)" message={errorMessage} />;
   }
-
   if (state === 'error-script') {
-    return (
-      <ErrorBox
-        title="KiCanvas konnte nicht geladen werden"
-        message={errorMessage}
-      />
-    );
+    return <ErrorBox title="KiCanvas konnte nicht geladen werden" message={errorMessage} />;
   }
-
   if (state === 'error-render') {
-    return (
-      <ErrorBox
-        title="Fehler beim Rendern"
-        message={errorMessage}
-      />
-    );
+    return <ErrorBox title="Fehler beim Rendern" message={errorMessage} />;
   }
 
   return (
@@ -242,16 +257,14 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
       {state === 'loading' && (
         <div className="kc-loading-overlay">
           <div className="spinner" />
-          <span>Lade KiCanvas…</span>
+          <span>Lade Dateien…</span>
         </div>
       )}
-      {/* Use React.createElement to avoid TypeScript JSX issues with custom elements */}
-      {React.createElement('kicanvas-embed', {
-        ref: embedRef,
-        controls: 'full',
-        controlslist: 'nodownload',
-        style: { width: '100%', height: '100%', display: state === 'ready' ? 'block' : 'none' } as React.CSSProperties,
-      })}
+      <div
+        ref={containerRef}
+        className="kc-embed-container"
+        style={{ width: '100%', height: '100%', display: state === 'ready' ? 'block' : 'none' }}
+      />
     </div>
   );
 }
