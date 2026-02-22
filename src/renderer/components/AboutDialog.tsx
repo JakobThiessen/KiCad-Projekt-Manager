@@ -6,7 +6,7 @@ import { useAppStore } from '../store/appStore';
 // but for simplicity we hardcode them here matching package.json.
 const APP_INFO = {
   name: 'KiCad Project Manager',
-  version: '1.0.2',
+  version: '1.0.3',
   description: 'KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer',
   author: 'JThiessen',
   license: 'MIT',

@@ -51,6 +51,7 @@ export class WorkspaceManager {
           excludedProjects: parsed.excludedProjects ?? [],
           settings: parsed.settings ?? {},
           kicadFilter: parsed.kicadFilter ?? false,
+          kicadInstallPaths: parsed.kicadInstallPaths ?? {},
         };
         this.settings = { ...DEFAULT_SETTINGS, ...this.wsData.settings };
       }
@@ -141,6 +142,15 @@ export class WorkspaceManager {
 
   setKicadFilter(enabled: boolean): void {
     this.wsData.kicadFilter = enabled;
+  }
+
+  getKicadInstallPaths(): Record<string, string> {
+    return this.wsData.kicadInstallPaths ?? {};
+  }
+
+  saveKicadInstallPaths(paths: Record<string, string>): void {
+    this.wsData.kicadInstallPaths = { ...this.wsData.kicadInstallPaths, ...paths };
+    this.save();
   }
 
   /** Scan all workspace folders for KiCad projects */

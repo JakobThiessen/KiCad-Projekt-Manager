@@ -25,12 +25,21 @@ export interface WorkspaceFile {
   excludedProjects: string[];
   settings: Partial<ProjectSettings>;
   kicadFilter?: boolean;
+  /** Cached KiCad install path(s) saved per workspace, keyed by version string */
+  kicadInstallPaths?: Record<string, string>;
 }
 
 export interface AppSettings {
   theme: 'dark' | 'light';
   recentMaxCount: number;
   recentWorkspaces: string[];
+}
+
+/** Represents a detected KiCad installation on the system */
+export interface KiCadInstallation {
+  version: string;    // e.g. "9.0", "8.0"
+  executablePath: string; // full path to kicad.exe
+  installDir: string; // root install directory
 }
 
 export interface FileTreeNode {
@@ -113,6 +122,12 @@ export const IPC_CHANNELS = {
 
   // WASM
   GET_WASM_BINARY: 'wasm:getBinary',
+
+  // KiCad version detection
+  KICAD_DETECT_INSTALLATIONS: 'kicad:detectInstallations',
+  KICAD_LAUNCH_WITH_VERSION: 'kicad:launchWithVersion',
+  KICAD_SAVE_INSTALL_PATHS: 'kicad:saveInstallPaths',
+  KICAD_GET_INSTALL_PATHS: 'kicad:getInstallPaths',
 
   // Window
   MINIMIZE_WINDOW: 'window:minimize',

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { WorkspaceState, KicadProject, FileTreeNode, EditorTab, KicadFileType } from '../../shared/types';
+import type { WorkspaceState, KicadProject, FileTreeNode, EditorTab, KicadFileType, KiCadInstallation } from '../../shared/types';
 import { getKicadFileType } from '../../shared/fileTypes';
 
 interface AppState {
@@ -22,6 +22,12 @@ interface AppState {
   theme: 'dark' | 'light';
   settingsOpen: boolean;
   aboutOpen: boolean;
+  /** Controls the KiCad Version Check dialog */
+  kicadVersionDialogOpen: boolean;
+  /** When set, the "Open with KiCad version" dialog is shown for this project */
+  kicadOpenWithProject: { project: KicadProject; installations: KiCadInstallation[] } | null;
+  /** Controls the Keyboard Shortcuts dialog */
+  shortcutsOpen: boolean;
 
   // Global progress indicator
   globalProgress: { message: string; indeterminate?: boolean } | null;
@@ -48,6 +54,9 @@ interface AppState {
   toggleTheme: () => void;
   setSettingsOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
+  setKicadVersionDialogOpen: (open: boolean) => void;
+  setKicadOpenWithProject: (data: { project: KicadProject; installations: KiCadInstallation[] } | null) => void;
+  setShortcutsOpen: (open: boolean) => void;
   setGlobalProgress: (progress: { message: string; indeterminate?: boolean } | null) => void;
   clearWorkspace: () => void;
 }
@@ -70,6 +79,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   theme: (localStorage.getItem('kicad-pm-theme') as 'dark' | 'light') ?? 'dark',
   settingsOpen: false,
   aboutOpen: false,
+  kicadVersionDialogOpen: false,
+  kicadOpenWithProject: null,
+  shortcutsOpen: false,
   globalProgress: null,
 
   // Workspace
@@ -155,6 +167,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setAboutOpen: (open) => set({ aboutOpen: open }),
+  setKicadVersionDialogOpen: (open) => set({ kicadVersionDialogOpen: open }),
+  setKicadOpenWithProject: (data) => set({ kicadOpenWithProject: data }),
+  setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
   setGlobalProgress: (progress) => set({ globalProgress: progress }),
   clearWorkspace: () => set({
     workspace: null,

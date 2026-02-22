@@ -82,7 +82,8 @@ The installer is created in the `release/` folder.
 | `npm install` | Install all dependencies |
 | `npm run dev` | Start development mode (Vite + Electron, hot-reload) |
 | `npm run build` | Compile TypeScript and build renderer |
-| `npm run dist` | Build + package with electron-builder |
+| `npm run dist:win` | Build + package with electron-builder |
+| `npm run dist:linux` | Build + package with electron-builder for Linux |
 | `npm run start` | Run Electron from compiled output |
 | `npm run lint` | Type-check with `tsc --noEmit` |
 

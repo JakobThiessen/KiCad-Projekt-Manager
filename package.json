@@ -1,6 +1,6 @@
 {
   "name": "kicad-project-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer",
   "main": "dist/main/main/main.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && electron .",
     "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && vite build --config vite.config.ts",
     "start": "electron .",
-    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
     "lint": "tsc --noEmit"
   },
   "keywords": [
@@ -44,6 +45,7 @@
     "lucide-react": "^0.575.0",
     "mermaid": "^11.12.3",
     "occt-import-js": "^0.0.23",
+    "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",

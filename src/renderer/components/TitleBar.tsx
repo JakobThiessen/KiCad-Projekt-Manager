@@ -64,13 +64,15 @@ function buildMenus(recentWorkspaces: string[]): Record<string, MenuItem[]> {
     Tools: [
       { label: 'Open in KiCad', action: 'openInKicad', shortcut: 'F5' },
       { label: 'separator', separator: true },
+      { label: 'Check KiCad Versions…', action: 'kicadVersionCheck' },
+      { label: 'separator', separator: true },
       { label: 'Refresh Workspace', action: 'refreshWorkspace', shortcut: 'F5' },
       { label: 'separator', separator: true },
       { label: 'Settings…', action: 'settings' },
     ],
     Help: [
       { label: 'About KiCad PM', action: 'about' },
-      { label: 'Keyboard Shortcuts', action: 'shortcuts' },
+      { label: 'Keyboard Shortcuts', action: 'shortcuts', shortcut: 'Ctrl+/' },
     ],
   };
 }
@@ -194,7 +196,73 @@ async function executeAction(action: string) {
     // Tools
     case 'openInKicad': {
       const tab = store.tabs.find(t => t.id === store.activeTabId);
-      if (tab) await window.api.launchKicad(tab.filePath);
+      if (!tab) break;
+
+      // Find the KiCad project associated with this file
+      const normTabPath = tab.filePath.replace(/\\/g, '/');
+      const project = store.workspace?.projects.find(p =>
+        normTabPath.startsWith(p.directory.replace(/\\/g, '/'))
+      ) ?? null;
+
+      // Detect available KiCad installations
+      const installations = await window.api.detectKicadInstallations();
+
+      if (installations.length === 0) {
+        // No installation found – fall back to OS default
+        await window.api.launchKicad(tab.filePath);
+        break;
+      }
+
+      const projectVersion = project?.kicadVersion;
+
+      // Find exact version match, then major-version match
+      const exactMatch = projectVersion
+        ? installations.find(i => i.version === projectVersion)
+        : null;
+      const majorMatch = projectVersion && !exactMatch
+        ? installations.find(i =>
+            i.version.split('.')[0] === projectVersion.split('.')[0]
+          )
+        : null;
+      const bestMatch = exactMatch ?? majorMatch;
+
+      // If there's only one installation and it matches (or project has no version), launch silently
+      if (installations.length === 1 && (!projectVersion || bestMatch)) {
+        const result = await window.api.launchKicadWithVersion(
+          installations[0].executablePath,
+          tab.filePath
+        );
+        if (!result.success) {
+          console.error('KiCad launch failed:', result.error);
+        }
+        break;
+      }
+
+      // If there's a perfect match and project has a version, launch directly
+      if (exactMatch) {
+        const result = await window.api.launchKicadWithVersion(exactMatch.executablePath, tab.filePath);
+        if (!result.success) console.error('KiCad launch failed:', result.error);
+        break;
+      }
+
+      // Otherwise show the "Open with version" dialog
+      // We pass the project (or a minimal stand-in) plus all installations
+      const projectForDialog = project ?? {
+        name: tab.title,
+        path: tab.filePath,
+        directory: tab.filePath.replace(/[/\\][^/\\]+$/, ''),
+        schematicFiles: [],
+        pcbFiles: [],
+        gerberFiles: [],
+        modelFiles: [],
+        kicadVersion: projectVersion,
+        lastModified: 0,
+      };
+      store.setKicadOpenWithProject({ project: projectForDialog, installations });
+      break;
+    }
+    case 'kicadVersionCheck': {
+      store.setKicadVersionDialogOpen(true);
       break;
     }
     case 'refreshWorkspace': {
@@ -234,6 +302,11 @@ async function executeAction(action: string) {
 
     case 'about': {
       store.setAboutOpen(true);
+      break;
+    }
+
+    case 'shortcuts': {
+      store.setShortcutsOpen(true);
       break;
     }
 
@@ -305,6 +378,7 @@ export function TitleBar() {
       else if (ctrl && e.key === 'w') { e.preventDefault(); executeAction('closeTab'); }
       else if (ctrl && e.key === 'b') { e.preventDefault(); executeAction('toggleSidebar'); }
       else if (ctrl && e.key === 'j') { e.preventDefault(); executeAction('toggleBottomPanel'); }
+      else if (ctrl && e.key === '/') { e.preventDefault(); executeAction('shortcuts'); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);

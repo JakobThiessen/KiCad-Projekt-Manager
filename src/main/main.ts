@@ -1,9 +1,94 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { WorkspaceManager } from './workspaceManager';
 import { FileWatcher } from './fileWatcher';
-import { IPC_CHANNELS, AppSettings } from '../shared/types';
+import { IPC_CHANNELS, AppSettings, KiCadInstallation } from '../shared/types';
+
+// ── KiCad Installation Detection ────────────────────────────────────────
+
+/**
+ * Scans common installation directories for KiCad executables.
+ * On Windows, KiCad installs to C:\Program Files\KiCad\{version}\bin\kicad.exe
+ */
+async function detectKicadInstallations(): Promise<KiCadInstallation[]> {
+  const installations: KiCadInstallation[] = [];
+
+  const searchRoots: string[] = [];
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] ?? 'C:\\Program Files';
+    const pf86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
+    searchRoots.push(path.join(pf, 'KiCad'));
+    searchRoots.push(path.join(pf86, 'KiCad'));
+  } else if (process.platform === 'darwin') {
+    searchRoots.push('/Applications');
+  } else {
+    // Linux: check common paths
+    searchRoots.push('/usr/bin', '/usr/local/bin', '/opt/kicad');
+  }
+
+  for (const root of searchRoots) {
+    if (!fs.existsSync(root)) continue;
+
+    try {
+      const entries = fs.readdirSync(root, { withFileTypes: true });
+
+      if (process.platform === 'win32') {
+        // Each subdirectory is a version, e.g. "9.0", "8.0"
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          const versionDir = path.join(root, entry.name);
+          const exePath = path.join(versionDir, 'bin', 'kicad.exe');
+          if (fs.existsSync(exePath)) {
+            installations.push({
+              version: entry.name,
+              executablePath: exePath,
+              installDir: versionDir,
+            });
+          }
+        }
+      } else if (process.platform === 'darwin') {
+        // KiCad.app style
+        for (const entry of entries) {
+          if (!entry.isDirectory() || !entry.name.startsWith('KiCad')) continue;
+          const appExe = path.join(root, entry.name, 'Contents', 'MacOS', 'kicad');
+          if (fs.existsSync(appExe)) {
+            const versionMatch = entry.name.match(/(\d+[\d.]*)/);
+            installations.push({
+              version: versionMatch ? versionMatch[1] : entry.name,
+              executablePath: appExe,
+              installDir: path.join(root, entry.name),
+            });
+          }
+        }
+      } else {
+        // Linux
+        const linuxExe = path.join(root, 'kicad');
+        if (fs.existsSync(linuxExe)) {
+          installations.push({
+            version: 'system',
+            executablePath: linuxExe,
+            installDir: root,
+          });
+        }
+      }
+    } catch { /* ignore unreadable dirs */ }
+  }
+
+  // Sort newest version first
+  installations.sort((a, b) => {
+    const av = a.version.split('.').map(Number);
+    const bv = b.version.split('.').map(Number);
+    for (let i = 0; i < Math.max(av.length, bv.length); i++) {
+      const diff = (bv[i] ?? 0) - (av[i] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  return installations;
+}
 
 let mainWindow: BrowserWindow | null = null;
 let workspaceManager: WorkspaceManager | null = null;
@@ -88,7 +173,7 @@ function createWindow(): void {
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src blob:; frame-src blob:;"
+            "default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-src 'none';"
           ],
         },
       });
@@ -321,7 +406,7 @@ function setupIpcHandlers(): void {
     return workspaceManager.getFileTree();
   });
 
-  // KiCad launch
+  // KiCad launch (default OS association)
   ipcMain.handle(IPC_CHANNELS.LAUNCH_KICAD, async (_event, filePath: string) => {
     try {
       await shell.openPath(filePath);
@@ -329,6 +414,41 @@ function setupIpcHandlers(): void {
     } catch (error) {
       return { success: false, error: String(error) };
     }
+  });
+
+  // Detect installed KiCad versions
+  ipcMain.handle(IPC_CHANNELS.KICAD_DETECT_INSTALLATIONS, async () => {
+    return detectKicadInstallations();
+  });
+
+  // Launch a KiCad project with a specific kicad.exe
+  ipcMain.handle(IPC_CHANNELS.KICAD_LAUNCH_WITH_VERSION, async (_event, exePath: string, projectFilePath: string) => {
+    return new Promise<{ success: boolean; error?: string }>(resolve => {
+      try {
+        const child = spawn(exePath, [projectFilePath], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: false,
+        });
+        child.unref();
+        resolve({ success: true });
+      } catch (error) {
+        resolve({ success: false, error: String(error) });
+      }
+    });
+  });
+
+  // Save KiCad install paths to workspace settings
+  ipcMain.handle(IPC_CHANNELS.KICAD_SAVE_INSTALL_PATHS, async (_event, paths: Record<string, string>) => {
+    if (workspaceManager) {
+      workspaceManager.saveKicadInstallPaths(paths);
+    }
+    return true;
+  });
+
+  // Get stored KiCad install paths from workspace
+  ipcMain.handle(IPC_CHANNELS.KICAD_GET_INSTALL_PATHS, async () => {
+    return workspaceManager?.getKicadInstallPaths() ?? {};
   });
 
   // Shell integration

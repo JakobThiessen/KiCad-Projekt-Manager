@@ -274,12 +274,85 @@ function StepMesh({ mesh }: { mesh: ParsedMesh }) {
   const hasFaceColors = mesh.brepFaces?.some(f => f.color != null) ?? false;
 
   const geometry = useMemo(() => {
+    const defaultR = mesh.color?.[0] ?? 0.7;
+    const defaultG = mesh.color?.[1] ?? 0.7;
+    const defaultB = mesh.color?.[2] ?? 0.75;
+
+    if (hasFaceColors && mesh.brepFaces) {
+      // Convert to non-indexed geometry so each triangle has its own 3 unique
+      // vertices — this prevents color bleed where shared vertices would get
+      // whichever face color was written last.
+      const triangleCount = mesh.indices.length / 3;
+      const nonIndexedPositions = new Float32Array(triangleCount * 9);
+      const nonIndexedNormals   = new Float32Array(triangleCount * 9);
+      const nonIndexedColors    = new Float32Array(triangleCount * 9);
+
+      // Build per-triangle color lookup from brep_faces
+      const triColor = new Float32Array(triangleCount * 3);
+      for (let t = 0; t < triangleCount; t++) {
+        triColor[t * 3]     = defaultR;
+        triColor[t * 3 + 1] = defaultG;
+        triColor[t * 3 + 2] = defaultB;
+      }
+      for (const face of mesh.brepFaces) {
+        const fc = face.color ?? [defaultR, defaultG, defaultB];
+        for (let t = face.first; t <= face.last; t++) {
+          if (t < triangleCount) {
+            triColor[t * 3]     = fc[0];
+            triColor[t * 3 + 1] = fc[1];
+            triColor[t * 3 + 2] = fc[2];
+          }
+        }
+      }
+
+      const hasNormals = mesh.normals.length > 0;
+      // Check if normals are all zero
+      let normalsValid = hasNormals;
+      if (hasNormals) {
+        let allZero = true;
+        for (let i = 0; i < mesh.normals.length; i++) {
+          if (mesh.normals[i] !== 0) { allZero = false; break; }
+        }
+        if (allZero) normalsValid = false;
+      }
+
+      for (let t = 0; t < triangleCount; t++) {
+        const r = triColor[t * 3];
+        const g = triColor[t * 3 + 1];
+        const b = triColor[t * 3 + 2];
+        for (let v = 0; v < 3; v++) {
+          const origIdx = mesh.indices[t * 3 + v];
+          const newIdx  = t * 3 + v;
+          nonIndexedPositions[newIdx * 3]     = mesh.positions[origIdx * 3];
+          nonIndexedPositions[newIdx * 3 + 1] = mesh.positions[origIdx * 3 + 1];
+          nonIndexedPositions[newIdx * 3 + 2] = mesh.positions[origIdx * 3 + 2];
+          if (normalsValid) {
+            nonIndexedNormals[newIdx * 3]     = mesh.normals[origIdx * 3];
+            nonIndexedNormals[newIdx * 3 + 1] = mesh.normals[origIdx * 3 + 1];
+            nonIndexedNormals[newIdx * 3 + 2] = mesh.normals[origIdx * 3 + 2];
+          }
+          nonIndexedColors[newIdx * 3]     = r;
+          nonIndexedColors[newIdx * 3 + 1] = g;
+          nonIndexedColors[newIdx * 3 + 2] = b;
+        }
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(nonIndexedPositions, 3));
+      geo.setAttribute('color',    new THREE.BufferAttribute(nonIndexedColors, 3));
+      if (normalsValid) {
+        geo.setAttribute('normal', new THREE.BufferAttribute(nonIndexedNormals, 3));
+      } else {
+        geo.computeVertexNormals();
+      }
+      return geo;
+    }
+
+    // Standard indexed geometry (no per-face colors)
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
     if (mesh.normals.length > 0) {
       geo.setAttribute('normal', new THREE.BufferAttribute(mesh.normals, 3));
-    } else {
-      geo.computeVertexNormals();
     }
     geo.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
 
@@ -288,39 +361,7 @@ function StepMesh({ mesh }: { mesh: ParsedMesh }) {
     for (let i = 0; i < mesh.normals.length; i++) {
       if (mesh.normals[i] !== 0) { allZero = false; break; }
     }
-    if (allZero) {
-      geo.computeVertexNormals();
-    }
-
-    // Apply per-face vertex colors from brep_faces if available
-    if (hasFaceColors && mesh.brepFaces) {
-      const vertexCount = mesh.positions.length / 3;
-      const colors = new Float32Array(vertexCount * 3);
-      // Default: use mesh-level color or neutral gray
-      const defaultR = mesh.color?.[0] ?? 0.7;
-      const defaultG = mesh.color?.[1] ?? 0.7;
-      const defaultB = mesh.color?.[2] ?? 0.75;
-      for (let i = 0; i < vertexCount; i++) {
-        colors[i * 3] = defaultR;
-        colors[i * 3 + 1] = defaultG;
-        colors[i * 3 + 2] = defaultB;
-      }
-      // Assign per-face colors: each face spans triangle indices [first..last]
-      for (const face of mesh.brepFaces) {
-        const fc = face.color ?? [defaultR, defaultG, defaultB];
-        for (let tri = face.first; tri <= face.last; tri++) {
-          for (let v = 0; v < 3; v++) {
-            const idx = mesh.indices[tri * 3 + v];
-            if (idx !== undefined) {
-              colors[idx * 3] = fc[0];
-              colors[idx * 3 + 1] = fc[1];
-              colors[idx * 3 + 2] = fc[2];
-            }
-          }
-        }
-      }
-      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    }
+    if (allZero) geo.computeVertexNormals();
 
     return geo;
   }, [mesh, hasFaceColors]);

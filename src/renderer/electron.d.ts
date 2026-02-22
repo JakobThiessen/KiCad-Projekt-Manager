@@ -1,5 +1,5 @@
 // Type declarations for the preload API exposed via contextBridge
-import type { WorkspaceState, FileTreeNode, ProjectSettings, AppSettings } from '../shared/types';
+import type { WorkspaceState, FileTreeNode, ProjectSettings, AppSettings, KiCadInstallation } from '../shared/types';
 
 export interface ElectronAPI {
   // Workspace
@@ -26,6 +26,10 @@ export interface ElectronAPI {
 
   // KiCad
   launchKicad(filePath: string): Promise<{ success: boolean; error?: string }>;
+  detectKicadInstallations(): Promise<KiCadInstallation[]>;
+  launchKicadWithVersion(exePath: string, projectFilePath: string): Promise<{ success: boolean; error?: string }>;
+  saveKicadInstallPaths(paths: Record<string, string>): Promise<boolean>;
+  getKicadInstallPaths(): Promise<Record<string, string>>;
 
   // Shell integration
   showInExplorer(filePath: string): void;

@@ -47,6 +47,14 @@ contextBridge.exposeInMainWorld('api', {
   // KiCad
   launchKicad: (filePath: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.LAUNCH_KICAD, filePath),
+  detectKicadInstallations: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.KICAD_DETECT_INSTALLATIONS),
+  launchKicadWithVersion: (exePath: string, projectFilePath: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.KICAD_LAUNCH_WITH_VERSION, exePath, projectFilePath),
+  saveKicadInstallPaths: (paths: Record<string, string>) =>
+    ipcRenderer.invoke(IPC_CHANNELS.KICAD_SAVE_INSTALL_PATHS, paths),
+  getKicadInstallPaths: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.KICAD_GET_INSTALL_PATHS),
 
   // Shell integration
   showInExplorer: (filePath: string) =>

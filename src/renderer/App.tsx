@@ -7,6 +7,9 @@ import { StatusBar } from './components/StatusBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SettingsDialog } from './components/SettingsDialog';
 import { AboutDialog } from './components/AboutDialog';
+import { KiCadVersionDialog } from './components/KiCadVersionDialog';
+import { KiCadOpenWithDialog } from './components/KiCadOpenWithDialog';
+import { KeyboardShortcutsDialog } from './components/KeyboardShortcutsDialog';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { useAppStore } from './store/appStore';
@@ -159,6 +162,9 @@ export function App() {
       <StatusBar />
       <SettingsDialog />
       <AboutDialog />
+      <KiCadVersionDialog />
+      <KiCadOpenWithDialog />
+      <KeyboardShortcutsDialog />
     </div>
   );
 }
