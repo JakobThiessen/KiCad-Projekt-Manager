@@ -17,6 +17,21 @@ import { useAppStore } from '../../store/appStore';
 let scriptState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
 const scriptCallbacks: Array<(ok: boolean) => void> = [];
 
+// Load Material Symbols Outlined font offline (required for KiCanvas icons in the EXE).
+// Uses FontFace API with a relative URL so it works in Electron (file://) without CSP issues.
+let materialFontLoaded = false;
+function loadMaterialSymbolsFont(): void {
+  if (materialFontLoaded || !window.FontFace) return;
+  materialFontLoaded = true;
+  const face = new FontFace(
+    'Material Symbols Outlined',
+    'url(./fonts/MaterialSymbolsOutlined.woff2)',
+    { style: 'normal', weight: '100 700', display: 'block' } as FontFaceDescriptors,
+  );
+  document.fonts.add(face);
+  face.load().catch(() => { /* font unavailable – icons fall back to text */ });
+}
+
 function loadKiCanvasScript(): Promise<boolean> {
   return new Promise(resolve => {
     if (scriptState === 'ready') { resolve(true); return; }
@@ -137,6 +152,60 @@ function ErrorBox({ title, message }: { title: string; message: string }) {
   );
 }
 
+// Settings persistence keys (our own namespace, separate from KiCanvas's "kc:" prefix)
+const PCB_LAYERS_KEY = 'kc-pm:pcb-layers-v1';
+
+/** Recursively find all elements matching a selector across nested shadow roots. */
+function deepQueryAll(root: Element | ShadowRoot, selector: string): Element[] {
+  const results: Element[] = [];
+  function traverse(node: Element | ShadowRoot): void {
+    node.querySelectorAll(selector).forEach(el => results.push(el));
+    node.querySelectorAll('*').forEach(el => {
+      if ((el as Element).shadowRoot) traverse((el as Element).shadowRoot!);
+    });
+  }
+  traverse(root);
+  return results;
+}
+
+/** Snapshot PCB layer visibility from the live shadow DOM and save to localStorage. */
+function savePcbLayers(embed: HTMLElement): void {
+  const sr = embed.shadowRoot;
+  if (!sr) return;
+  const controls = deepQueryAll(sr, 'kc-board-layer-control');
+  if (controls.length === 0) return;
+  const layers: Record<string, boolean> = {};
+  for (const ctrl of controls) {
+    const name = ctrl.getAttribute('layer-name');
+    if (name) layers[name] = ctrl.hasAttribute('layer-visible');
+  }
+  localStorage.setItem(PCB_LAYERS_KEY, JSON.stringify(layers));
+}
+
+/** Restore saved PCB layer visibility into a freshly loaded embed.
+ *  KiCanvas dispatches "kicanvas:layer-control:visibility" when a control is toggled.
+ *  We dispatch this event ourselves on controls whose state differs from the snapshot. */
+function restorePcbLayers(embed: HTMLElement): void {
+  const raw = localStorage.getItem(PCB_LAYERS_KEY);
+  if (!raw) return;
+  let saved: Record<string, boolean>;
+  try { saved = JSON.parse(raw); } catch { return; }
+  const sr = embed.shadowRoot;
+  if (!sr) return;
+  const controls = deepQueryAll(sr, 'kc-board-layer-control');
+  for (const ctrl of controls) {
+    const name = ctrl.getAttribute('layer-name');
+    if (!name || !(name in saved)) continue;
+    const currentlyVisible = ctrl.hasAttribute('layer-visible');
+    if (currentlyVisible !== saved[name]) {
+      // Dispatch the same event KiCanvas uses internally to toggle visibility
+      ctrl.dispatchEvent(
+        new CustomEvent('kicanvas:layer-control:visibility', { detail: ctrl, bubbles: true }),
+      );
+    }
+  }
+}
+
 // Main component
 interface KiCanvasViewerProps {
   content: string;
@@ -168,10 +237,12 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
 
   useEffect(() => {
     let cancelled = false;
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
     async function setup() {
       setState('loading');
       setLoadingStatus('Opening file…');
+      loadMaterialSymbolsFont();  // ensure icon font is available offline
 
       // 1. Legacy check
       const fmt = detectLegacyFormat(content, filePath);
@@ -227,7 +298,7 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
       try {
         const embed = document.createElement('kicanvas-embed') as HTMLElement;
         embed.setAttribute('controls', 'full');
-        embed.setAttribute('controlslist', 'nodownload');
+        embed.setAttribute('controlslist', 'nodownload nooverlay');
         embed.setAttribute('theme', kcTheme(useAppStore.getState().theme));
         embed.style.cssText = 'width:100%;height:100%;display:block;';
 
@@ -246,6 +317,18 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
         container.appendChild(embed);
         embedRef.current = embed;
 
+        // Debounced auto-save: any click inside KiCanvas (pointer events are composed,
+        // so they DO bubble up to the embed element from inside shadow DOM)
+        if (fileType === 'pcb') {
+          const handleClick = () => {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+              if (!cancelled && embedRef.current) savePcbLayers(embedRef.current);
+            }, 600);
+          };
+          embed.addEventListener('click', handleClick);
+        }
+
         // 6. Wait for KiCanvas to finish rendering before revealing the viewer.
         //    Use the kicanvas:load event, with a 6 s timeout as fallback.
         if (!cancelled) setLoadingStatus('Rendering…');
@@ -258,6 +341,13 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
         });
 
         if (!cancelled) setState('ready');
+
+        // Restore saved PCB layer visibility (small delay so Lit finishes rendering controls)
+        if (!cancelled && fileType === 'pcb') {
+          setTimeout(() => {
+            if (!cancelled && embedRef.current) restorePcbLayers(embedRef.current);
+          }, 300);
+        }
       } catch (err: unknown) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -270,6 +360,9 @@ export function KiCanvasViewer({ content, filePath, fileType }: KiCanvasViewerPr
 
     return () => {
       cancelled = true;
+      if (saveTimer) clearTimeout(saveTimer);
+      // Save PCB layer state before the embed is destroyed
+      if (fileType === 'pcb' && embedRef.current) savePcbLayers(embedRef.current);
       if (embedRef.current) {
         embedRef.current.remove();
         embedRef.current = null;
