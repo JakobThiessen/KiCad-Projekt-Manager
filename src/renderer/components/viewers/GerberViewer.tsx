@@ -1,7 +1,7 @@
 ﻿import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Layers, Eye, EyeOff } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Layers, Eye, EyeOff, FlipHorizontal2 } from 'lucide-react';
 import * as gerberParser from '@tracespace/parser';
-import { identifyLayers, TYPE_DRILL, TYPE_DRAWING, SIDE_ALL, SIDE_TOP } from '@tracespace/identify-layers';
+import { identifyLayers, TYPE_DRILL, TYPE_DRAWING, SIDE_ALL, SIDE_TOP, SIDE_BOTTOM } from '@tracespace/identify-layers';
 import { plot, renderLayers, renderBoard, stringifySvg } from '@tracespace/core';
 import type { Layer, RenderLayersResult } from '@tracespace/core';
 
@@ -40,7 +40,8 @@ function extractViewBox(svgStr: string): { width: number; height: number } {
 
 async function buildSvgImage(
   renderResult: RenderLayersResult,
-  layers: LayerInfo[]
+  layers: LayerInfo[],
+  side: string = SIDE_TOP
 ): Promise<{ img: HTMLImageElement; dims: { width: number; height: number } } | null> {
   // Filter to only visible layers
   const visibleIds = new Set(layers.filter(l => l.visible).map(l => l.id));
@@ -50,10 +51,10 @@ async function buildSvgImage(
   };
 
   const board = renderBoard(visibleResult);
-  const topSvg = (board as Record<string, unknown>)[SIDE_TOP];
-  if (!topSvg) return null;
+  const boardSvg = (board as Record<string, unknown>)[side] ?? (board as Record<string, unknown>)[SIDE_TOP];
+  if (!boardSvg) return null;
 
-  const svgStr = stringifySvg(topSvg as Parameters<typeof stringifySvg>[0]);
+  const svgStr = stringifySvg(boardSvg as Parameters<typeof stringifySvg>[0]);
   const dims = extractViewBox(svgStr);
 
   return new Promise<{ img: HTMLImageElement; dims: { width: number; height: number } } | null>((resolve) => {
@@ -88,9 +89,11 @@ export function GerberViewer({ filePath }: GerberViewerProps) {
   const [showLayers, setShowLayers] = useState(true);
   const [svgImage, setSvgImage] = useState<HTMLImageElement | null>(null);
   const [svgDims, setSvgDims] = useState({ width: 100, height: 100 });
+  const [viewSide, setViewSide] = useState<string>(SIDE_TOP);
 
   // Stored render result for layer toggling without re-parsing
   const renderResultRef = useRef<RenderLayersResult | null>(null);
+  const viewSideRef = useRef<string>(SIDE_TOP);
 
   // Load all Gerber files in the same directory and render composite
   useEffect(() => {
@@ -164,10 +167,12 @@ export function GerberViewer({ filePath }: GerberViewerProps) {
         const initialLayerInfos: LayerInfo[] = renderResult.layers.map((l) => ({ ...l, visible: true }));
 
         if (cancelled) return;
+        setViewSide(SIDE_TOP);
+        viewSideRef.current = SIDE_TOP;
         setLayerInfos(initialLayerInfos);
 
         // Build SVG image
-        const result = await buildSvgImage(renderResult, initialLayerInfos);
+        const result = await buildSvgImage(renderResult, initialLayerInfos, SIDE_TOP);
         if (cancelled) return;
 
         if (!result) {
@@ -223,15 +228,25 @@ export function GerberViewer({ filePath }: GerberViewerProps) {
       const drawH = svgDims.height * transform.scale;
       const x = rect.width / 2 - drawW / 2 + transform.offsetX;
       const y = rect.height / 2 - drawH / 2 + transform.offsetY;
-      ctx.drawImage(svgImage, x, y, drawW, drawH);
+
+      if (viewSide === SIDE_BOTTOM) {
+        // Mirror horizontally so bottom view looks physically correct
+        ctx.save();
+        ctx.translate(rect.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(svgImage, rect.width - x - drawW, y, drawW, drawH);
+        ctx.restore();
+      } else {
+        ctx.drawImage(svgImage, x, y, drawW, drawH);
+      }
     }
 
     // Info bar
     ctx.fillStyle = '#6c7086';
     ctx.font = '11px "Segoe UI", sans-serif';
     const zoomPct = (transform.scale * 100).toFixed(0);
-    ctx.fillText(`Zoom: ${zoomPct}%  |  ${layerInfos.length} layer${layerInfos.length !== 1 ? 's' : ''}`, 8, rect.height - 8);
-  }, [svgImage, svgDims, transform, layerInfos.length]);
+    ctx.fillText(`Zoom: ${zoomPct}%  |  ${layerInfos.length} layer${layerInfos.length !== 1 ? 's' : ''}  |  ${viewSide === SIDE_BOTTOM ? 'Bottom' : 'Top'} view`, 8, rect.height - 8);
+  }, [svgImage, svgDims, transform, layerInfos.length, viewSide]);
 
   // Redraw on resize
   useEffect(() => {
@@ -253,19 +268,41 @@ export function GerberViewer({ filePath }: GerberViewerProps) {
       const drawH = svgDims.height * transform.scale;
       const x = rect.width / 2 - drawW / 2 + transform.offsetX;
       const y = rect.height / 2 - drawH / 2 + transform.offsetY;
-      ctx.drawImage(svgImage, x, y, drawW, drawH);
+      if (viewSide === SIDE_BOTTOM) {
+        ctx.save();
+        ctx.translate(rect.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(svgImage, rect.width - x - drawW, y, drawW, drawH);
+        ctx.restore();
+      } else {
+        ctx.drawImage(svgImage, x, y, drawW, drawH);
+      }
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, [svgImage, svgDims, transform]);
+  }, [svgImage, svgDims, transform, viewSide]);
 
-  // Layer visibility toggle â€” re-renders SVG with filtered layers
+  // Layer visibility toggle – re-renders SVG with filtered layers
   const handleToggleLayer = useCallback(async (id: string) => {
     const renderResult = renderResultRef.current;
     if (!renderResult) return;
     const updated = layerInfos.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l));
     setLayerInfos(updated);
-    const result = await buildSvgImage(renderResult, updated);
+    const result = await buildSvgImage(renderResult, updated, viewSideRef.current);
+    if (result) {
+      setSvgDims(result.dims);
+      setSvgImage(result.img);
+    }
+  }, [layerInfos]);
+
+  // Flip between top and bottom view
+  const handleFlipSide = useCallback(async () => {
+    const renderResult = renderResultRef.current;
+    if (!renderResult) return;
+    const newSide = viewSideRef.current === SIDE_TOP ? SIDE_BOTTOM : SIDE_TOP;
+    viewSideRef.current = newSide;
+    setViewSide(newSide);
+    const result = await buildSvgImage(renderResult, layerInfos, newSide);
     if (result) {
       setSvgDims(result.dims);
       setSvgImage(result.img);
@@ -316,6 +353,19 @@ export function GerberViewer({ filePath }: GerberViewerProps) {
         <button className="toolbar-btn" onClick={handleFit} title="Fit to View">
           <Maximize size={16} />
         </button>
+        <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 4px' }} />
+        <button
+          className="toolbar-btn"
+          onClick={handleFlipSide}
+          title={viewSide === SIDE_TOP ? 'Switch to Bottom View' : 'Switch to Top View'}
+          style={{ color: viewSide === SIDE_BOTTOM ? 'var(--accent, #89b4fa)' : undefined }}
+          disabled={loading}
+        >
+          <FlipHorizontal2 size={16} />
+        </button>
+        <span style={{ fontSize: '10px', color: viewSide === SIDE_BOTTOM ? 'var(--accent, #89b4fa)' : 'var(--text-muted)', minWidth: '26px', userSelect: 'none' }}>
+          {viewSide === SIDE_TOP ? 'TOP' : 'BOT'}
+        </span>
         <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 4px' }} />
         <button
           className="toolbar-btn"
