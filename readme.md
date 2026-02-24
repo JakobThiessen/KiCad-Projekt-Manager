@@ -75,6 +75,51 @@ The installer is created in the `release/` folder.
 
 ---
 
+### Browser Mode (without Electron)
+
+The app can also run as a pure web app in the browser. An Express server (port 3001) handles all file system operations, while the Vite app (port 5173) acts as the frontend.
+
+#### Development
+
+```powershell
+# Starts Express server (port 3001) + Vite dev server (port 5173) in parallel
+# The Vite proxy forwards /api automatically to Express — no CORS issues
+npm run dev:browser
+```
+
+Then open in browser: **http://localhost:5173**
+
+> **Note (Windows):** If npm scripts are blocked in PowerShell:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+> ```
+
+#### Production Build
+
+```powershell
+# Compiles TypeScript (server) + builds Vite bundle
+npm run build:browser
+```
+
+#### Start Production
+
+```powershell
+# Express server serves the built files
+npm run start:browser
+```
+
+Then open in browser: **http://localhost:3001**
+
+#### Port Overview
+
+| Mode | Port | Description |
+|------|------|-------------|
+| `dev:browser` – Vite (UI) | 5173 | Frontend with hot-reload, proxies `/api` → 3001 |
+| `dev:browser` – Express | 3001 | REST API + SSE file events |
+| `start:browser` – Production | 3001 | Express serves UI + API from `dist/` |
+
+---
+
 ## Available Scripts
 
 | Command | Description |
@@ -82,10 +127,13 @@ The installer is created in the `release/` folder.
 | `npm install` | Install all dependencies |
 | `npm run dev` | Start development mode (Vite + Electron, hot-reload) |
 | `npm run build` | Compile TypeScript and build renderer |
-| `npm run dist:win` | Build + package with electron-builder |
-| `npm run dist:linux` | Build + package with electron-builder for Linux |
+| `npm run dist:win` | Build + package with electron-builder (Windows) |
+| `npm run dist:linux` | Build + package with electron-builder (Linux) |
 | `npm run start` | Run Electron from compiled output |
 | `npm run lint` | Type-check with `tsc --noEmit` |
+| `npm run dev:browser` | Browser mode: Express (3001) + Vite (5173) with proxy |
+| `npm run build:browser` | Browser mode: TypeScript + Vite production build |
+| `npm run start:browser` | Browser mode: Start production server (port 3001) |
 
 ---
 
@@ -170,7 +218,9 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 | Layer | Technology |
 |-------|-----------|
 | Desktop Runtime | Electron 40 |
+| Browser Server | Express 5 + multer + cors |
 | Frontend | React 19, TypeScript 5.9 |
+| Routing | react-router-dom 7 |
 | Bundler | Vite 7 |
 | State Management | Zustand 5 |
 | Schematic / PCB Viewer | KiCanvas (MIT, bundled offline) |
@@ -180,6 +230,7 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 | STEP Import | occt-import-js (WASM) |
 | PDF Viewer | PDF.js (pdfjs-dist, Apache 2.0) |
 | Markdown | react-markdown + remark-gfm + Mermaid |
+| Terminal | xterm.js + xterm Fit Addon |
 | Icons | Lucide React |
 | Packaging | electron-builder |
 | Theming | Catppuccin (CSS custom properties) |
@@ -214,7 +265,7 @@ Detailed documentation is available in the [documentation/](documentation/) fold
 
 ## Support
 
-<!-- Dies ist ein Kommentar und wird nicht gerendert
+<!-- This is a comment and will not be rendered
 If you find this project useful, consider supporting its development:
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-☕-yellow?style=for-the-badge)](https://buymeacoffee.com/<your-username>)
 

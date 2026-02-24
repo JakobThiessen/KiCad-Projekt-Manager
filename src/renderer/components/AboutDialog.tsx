@@ -4,7 +4,7 @@ import { useAppStore } from '../store/appStore';
 
 const APP_INFO = {
   name: 'KiCad Project Manager',
-  version: '1.0.4',
+  version: '1.0.5',
   description: 'KiCad Project Manager with integrated Schematic/PCB Editor, Gerber Viewer and 3D Viewer',
   author: 'JThiessen',
   license: 'MIT',
@@ -44,6 +44,12 @@ const THIRD_PARTY: ThirdPartyLicense[] = [
     author: 'Paul Henschel',
     license: 'MIT',
     url: 'https://github.com/pmndrs/zustand',
+  },
+  {
+    name: 'React Router DOM',
+    author: 'Remix Software Inc.',
+    license: 'MIT',
+    url: 'https://github.com/remix-run/react-router',
   },
   {
     name: 'Lucide React',
@@ -176,6 +182,31 @@ const THIRD_PARTY: ThirdPartyLicense[] = [
     author: 'The xterm.js authors',
     license: 'MIT',
     url: 'https://github.com/xtermjs/xterm.js',
+  },
+  {
+    name: 'xterm Fit Addon (@xterm/addon-fit)',
+    author: 'The xterm.js authors',
+    license: 'MIT',
+    url: 'https://github.com/xtermjs/xterm.js',
+  },
+  // ── Browser Server ───────────────────────────────────────────────────────────
+  {
+    name: 'Express',
+    author: 'TJ Holowaychuk and contributors',
+    license: 'MIT',
+    url: 'https://github.com/expressjs/express',
+  },
+  {
+    name: 'cors',
+    author: 'Troy Goode',
+    license: 'MIT',
+    url: 'https://github.com/expressjs/cors',
+  },
+  {
+    name: 'multer',
+    author: 'Express contributors',
+    license: 'MIT',
+    url: 'https://github.com/expressjs/multer',
   },
 ];
 
